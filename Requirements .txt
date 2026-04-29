@@ -1,0 +1,60 @@
+1. Introduction
+
+The purpose of this project is to develop an AI-powered e-commerce platform 
+for selling products as shoes, clothing, and accessories
+
+2. Functional Requirements
+
+The system will provide the following functionalities:
+
+Users
+    • Users can register and create accounts.
+    • Users can log in and log out securely.
+    • Users can view and update their profile information.
+    • Users can browse products by category, price, and rating.
+
+Products Management
+    • Users can browse and view available products.
+    • Users can view detailed product information (price, description, images, sizes, colors).
+    • Admins can add, edit, and delete products.
+
+Shopping Cart
+    • Users can add products to the cart.
+    • Users can update product quantities.
+    • Users can remove items from the cart.
+    • The system calculates the total price automatically.
+
+Order Management
+    • Users can make orders from the cart.
+    • Users can view their order history.
+    • The system tracks order status.
+    • Admins can view and update order status.
+
+AI Features
+    • AI chatbot assists users and answers product questions.
+    • AI recommends products based on user behavior or queries.
+    • AI generates product descriptions for admins.
+    • AI analyzes customer reviews to provide an overview.
+    • AI recieves photos from users and identifies products or provides recommendations.
+
+2. Non-Functional Requirements
+Performance
+    • The system should respond to user actions within 2 seconds.
+
+Security
+    • User passwords must be encrypted.
+    • The system must use secure authentication (JWT).
+    • All user inputs must be validated.
+
+Scalability
+    • The system should support increasing numbers of users and products.
+
+Usability
+    • The system interface should be simple and user-friendly.
+    • The platform should be responsive and work on mobile devices.
+
+Maintainability
+    • The backend should follow a modular architecture.
+    • APIs should be well documented.
+
+
