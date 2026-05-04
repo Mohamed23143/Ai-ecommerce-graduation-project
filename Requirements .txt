@@ -37,7 +37,7 @@ AI Features
     • AI analyzes customer reviews to provide an overview.
     • AI recieves photos from users and identifies products or provides recommendations.
 
-2. Non-Functional Requirements
+3. Non-Functional Requirements
 Performance
     • The system should respond to user actions within 2 seconds.
 
