@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" pages="3">
   <diagram name="Case diagram" id="Ukd_T0GLu3zLiKklpPS6">
-    <mxGraphModel dx="2934" dy="2368" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1880" dy="1734" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -157,7 +157,7 @@
             <mxPoint x="200" y="480" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="gRcSuxMLX8hkOg87riV9-2" edge="1" parent="1" source="42UfnHl3v2zD6W1I_n1t-52" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" target="42UfnHl3v2zD6W1I_n1t-50" value="Extends">
+        <mxCell id="gRcSuxMLX8hkOg87riV9-2" edge="1" parent="1" source="42UfnHl3v2zD6W1I_n1t-52" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;dashed=1;" target="42UfnHl3v2zD6W1I_n1t-50" value="Extends">
           <mxGeometry relative="1" width="160" as="geometry">
             <Array as="points" />
             <mxPoint x="580" y="-140" as="sourcePoint" />
@@ -301,7 +301,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="ZmGAJhA09x17_pmPYQYz" name="Sequence diagram">
-    <mxGraphModel dx="2575" dy="1585" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1873" dy="1153" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -422,13 +422,13 @@
             <mxPoint x="950" y="301" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-41" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-31" value="check">
+        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-41" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-31" value="Check if user exist or Add a new user">
           <mxGeometry relative="1" width="160" as="geometry">
             <mxPoint x="820" y="300" as="sourcePoint" />
             <mxPoint x="1535.5" y="300" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-48" edge="1" parent="1" source="Ofyc5QRI0wQSs9B_U0kA-36" style="edgeStyle=none;html=1;endArrow=open;endSize=12;dashed=1;verticalAlign=bottom;rounded=0;" value="if true Signed in">
+        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-48" edge="1" parent="1" source="Ofyc5QRI0wQSs9B_U0kA-36" style="edgeStyle=none;html=1;endArrow=open;endSize=12;dashed=1;verticalAlign=bottom;rounded=0;" value="if true Sign in">
           <mxGeometry relative="1" width="160" as="geometry">
             <Array as="points" />
             <mxPoint x="810" y="350" as="sourcePoint" />
@@ -466,7 +466,7 @@
             <mxPoint x="675" y="520.5" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-55" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-31" value="checking">
+        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-55" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-31" value="Searching">
           <mxGeometry relative="1" width="160" x="0.0042" as="geometry">
             <mxPoint as="offset" />
             <Array as="points" />
@@ -518,7 +518,7 @@
         <mxCell id="Ofyc5QRI0wQSs9B_U0kA-71" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fillColor=#808080;" value="" vertex="1">
           <mxGeometry height="95" width="10" x="1095" y="635" as="geometry" />
         </mxCell>
-        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-75" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-29" value="Ceckout">
+        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-75" edge="1" parent="1" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;rounded=0;" target="Ofyc5QRI0wQSs9B_U0kA-29" value="Checkout">
           <mxGeometry relative="1" width="160" x="0.0042" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
@@ -562,7 +562,7 @@
             <mxPoint x="1390" y="860" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-85" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=open;endSize=12;dashed=1;verticalAlign=bottom;rounded=0;" value="Sow the response">
+        <mxCell id="Ofyc5QRI0wQSs9B_U0kA-85" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=open;endSize=12;dashed=1;verticalAlign=bottom;rounded=0;" value="Show the response">
           <mxGeometry relative="1" width="160" as="geometry">
             <mxPoint x="950" y="860" as="sourcePoint" />
             <mxPoint x="680" y="860" as="targetPoint" />
