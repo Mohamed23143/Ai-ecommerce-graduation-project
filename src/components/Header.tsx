@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Show, UserButton } from '@clerk/react';
 import { IoArrowBack, IoMenuOutline, IoCloseOutline, IoBagHandleOutline, IoSearchOutline, IoPersonOutline } from 'react-icons/io5';
 import { useCart } from '../context/CartContext';
 
@@ -49,9 +50,20 @@ const Header = ({ backLabel = 'Back to Collection', backTo = '/' }: HeaderProps)
             <button onClick={() => setIsSearchOpen(true)} className="p-1 text-dark hover:text-gold transition-colors cursor-pointer" aria-label="Search">
               <IoSearchOutline className="w-[18px] h-[18px]" />
             </button>
-            <Link to="/auth" className="p-1 text-dark hover:text-gold transition-colors" aria-label="Account">
-              <IoPersonOutline className="w-[18px] h-[18px]" />
-            </Link>
+            <Show when="signed-in">
+              <UserButton
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: 'w-[22px] h-[22px]',
+                  },
+                }}
+              />
+            </Show>
+            <Show when="signed-out">
+              <Link to="/auth" className="p-1 text-dark hover:text-gold transition-colors" aria-label="Account">
+                <IoPersonOutline className="w-[18px] h-[18px]" />
+              </Link>
+            </Show>
             <button onClick={() => setIsCartOpen(true)} className="p-1 text-dark hover:text-gold transition-colors cursor-pointer relative" aria-label="Cart">
               <IoBagHandleOutline className="w-[18px] h-[18px]" />
               {cartCount > 0 && (
@@ -107,7 +119,15 @@ const Header = ({ backLabel = 'Back to Collection', backTo = '/' }: HeaderProps)
               <Link to="/category/accessories" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Accessories</Link>
               <Link to="/new-arrivals" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">New Arrivals</Link>
               <Link to="/sale" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Sale</Link>
-              <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Account</Link>
+              <Show when="signed-in">
+                <div className="flex items-center gap-3 text-sm font-sans tracking-widest-xl uppercase text-dark">
+                  <UserButton />
+                  <span>Account</span>
+                </div>
+              </Show>
+              <Show when="signed-out">
+                <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Account</Link>
+              </Show>
             </nav>
 
             <div className="mt-auto pt-8 border-t border-border-light">
