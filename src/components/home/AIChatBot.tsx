@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { IoClose, IoChatbubbleEllipses, IoArrowUp, IoPaperPlane } from 'react-icons/io5';
+import { IoClose, IoChatbubbleEllipses, IoArrowUp, IoPaperPlane, IoSparkles, IoPersonOutline } from 'react-icons/io5';
 import { getAIResponse } from '../../services/openrouter';
 
 type Message = {
@@ -73,58 +73,61 @@ const AIChatBot = () => {
         {/* Back to Top */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className={`w-14 h-14 rounded-full bg-dark text-white shadow-lg flex items-center justify-center hover:bg-gold transition-all duration-300 active:scale-95 ${
+          className={`w-11 h-11 rounded-lg bg-dark text-white shadow-lg flex items-center justify-center hover:bg-gold transition-all duration-300 active:scale-95 ${
             showBackToTop && !isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
           aria-label="Back to top"
         >
-          <IoArrowUp className="w-6 h-6" />
+          <IoArrowUp className="w-4 h-4" />
         </button>
 
         {isOpen && (
           <div
-            className="w-[360px] sm:w-[400px] h-[560px] bg-cream rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-light"
+            className="w-[360px] sm:w-[400px] h-[580px] bg-cream rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-light relative"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-cream px-6 py-5 flex items-center justify-between border-b border-border-light">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-dark flex items-center justify-center overflow-hidden">
+                <div className="w-10 h-10 rounded-lg bg-dark flex items-center justify-center overflow-hidden shadow-sm">
                   <img src="/favicon.svg" alt="NASSEG" className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-serif font-medium text-dark">AI Stylist</h3>
-                  <span className="text-[10px] text-muted font-sans tracking-widest-xl uppercase">Powered by NASSEG</span>
+                  <h3 className="text-sm font-serif italic font-medium text-dark tracking-wide">AI Stylist</h3>
+                  <span className="text-[9px] text-gold font-sans tracking-widest-2xl uppercase">Concierge</span>
                 </div>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg bg-cream-dark hover:bg-gold hover:text-white flex items-center justify-center transition-all duration-300 group"
               >
-                <IoClose className="w-4 h-4 text-muted" />
+                <IoClose className="w-4 h-4 text-muted group-hover:text-white" />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 scrollbar-thin">
               {messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className="flex gap-2 max-w-[85%]">
-                    {msg.sender === 'bot' && (
-                      <div className="w-7 h-7 rounded-full bg-dark flex-shrink-0 flex items-center justify-center mt-1 overflow-hidden">
-                        <img src="/favicon.svg" alt="NASSEG" className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                        msg.sender === 'user'
-                          ? 'bg-dark text-white rounded-tr-md'
-                          : 'bg-white text-dark border border-border-light rounded-tl-md'
-                      }`}
-                    >
-                      {msg.text}
+                <div key={msg.id} className={`flex items-start gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} ${msg.sender === 'bot' && messages.indexOf(msg) === 0 ? 'fade-in-up' : ''}`}>
+                  {msg.sender === 'bot' && (
+                    <div className="w-7 h-7 rounded-lg bg-dark flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm mt-1">
+                      <img src="/favicon.svg" alt="NASSEG" className="w-3.5 h-3.5" />
                     </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.sender === 'user'
+                        ? 'bg-dark text-white rounded-tr-md shadow-md'
+                        : 'bg-white text-dark border border-border-light rounded-tl-md shadow-sm'
+                    }`}
+                  >
+                    {msg.text}
                   </div>
+                  {msg.sender === 'user' && (
+                    <div className="w-7 h-7 rounded-lg bg-gold flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                      <IoPersonOutline className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -138,7 +141,7 @@ const AIChatBot = () => {
                   <button
                     key={reply}
                     onClick={() => handleSend(reply)}
-                    className="text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2 border border-border-light rounded-full hover:border-gold hover:text-gold transition-all duration-300"
+                    className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 border border-border-light rounded-lg hover:border-gold hover:text-gold hover:bg-white transition-all duration-300"
                   >
                     {reply}
                   </button>
@@ -146,8 +149,19 @@ const AIChatBot = () => {
               </div>
             )}
 
+            {/* Loading indicator */}
+            {loading && (
+              <div className="px-6 pb-3">
+                <div className="flex items-center gap-1.5 text-muted">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+
             {/* Input */}
-            <div className="px-6 py-4 border-t border-border-light bg-cream-dark/30">
+            <div className="px-6 py-4 border-t border-border-light bg-cream-dark/50">
               <div className="flex items-center gap-3">
                 <input
                   type="text"
@@ -155,11 +169,11 @@ const AIChatBot = () => {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                   placeholder="Type a message..."
-                  className="flex-1 bg-white border border-border-light rounded-full px-5 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40"
+                  className="flex-1 bg-white border border-border-light rounded-lg px-5 py-3 text-sm font-sans outline-none focus:border-gold focus:ring-1 focus:ring-gold/20 transition-all duration-300 placeholder:text-muted/40"
                 />
                 <button
                   onClick={() => handleSend()}
-                  className="w-10 h-10 rounded-full bg-dark text-white flex items-center justify-center hover:bg-gold transition-colors flex-shrink-0"
+                  className="w-10 h-10 rounded-lg bg-gold text-white flex items-center justify-center hover:bg-gold-hover transition-all duration-300 flex-shrink-0 active:scale-95 shadow-sm"
                 >
                   <IoPaperPlane className="w-4 h-4" />
                 </button>
@@ -171,13 +185,10 @@ const AIChatBot = () => {
         {/* Chat FAB Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-14 h-14 rounded-full bg-dark text-white shadow-lg flex items-center justify-center hover:bg-gold transition-all duration-300 active:scale-95 relative group"
+          className="w-11 h-11 rounded-lg bg-dark text-white shadow-lg flex items-center justify-center hover:bg-gold transition-all duration-300 active:scale-95 relative group border border-dark hover:border-gold"
         >
-          {isOpen ? (
-            <IoClose className="w-6 h-6" />
-          ) : (
-            <IoChatbubbleEllipses className="w-6 h-6 text-white" />
-          )}
+          <IoChatbubbleEllipses className="w-5 h-5 text-white group-hover:hidden" />
+          <IoSparkles className="w-5 h-5 text-white hidden group-hover:block" />
         </button>
       </div>
     </>

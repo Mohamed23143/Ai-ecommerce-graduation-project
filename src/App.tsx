@@ -12,13 +12,14 @@ import NewArrivalsPage from './pages/NewArrivalsPage';
 import SalePage from './pages/SalePage';
 import CollectionsPage from './pages/CollectionsPage';
 import AuthPage from './pages/AuthPage';
+import UserDashboard from './pages/UserDashboard';
 import CheckoutPage from './pages/CheckoutPage';
 import InfoPage from './pages/InfoPage';
+import AdminPage from './pages/AdminPage';
 
 function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
-
   return (
     <>
       <ScrollToTop />
@@ -33,10 +34,10 @@ function AppContent() {
           <Route path="/new-arrivals" element={<NewArrivalsPage />} />
           <Route path="/sale" element={<SalePage />} />
           <Route path="/collections" element={<CollectionsPage />} />
+          <Route path="/account" element={<UserDashboard />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/info/:slug" element={<InfoPage />} />
-          {/* Direct routes for common info pages */}
           <Route path="/contact-us" element={<InfoPage />} />
           <Route path="/about" element={<InfoPage />} />
           <Route path="/faqs" element={<InfoPage />} />
@@ -56,7 +57,11 @@ function App() {
   return (
     <CartProvider>
       <Router>
-        <AppContent />
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/*" element={<AdminPage />} />
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
       </Router>
     </CartProvider>
   );

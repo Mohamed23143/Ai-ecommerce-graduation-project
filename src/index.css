@@ -136,6 +136,24 @@
   border-radius: 2px;
 }
 
+/* AI Chat custom scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #e2e2e2;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #c4a265;
+}
+
 /* Smooth image zoom on hover */
 .img-zoom {
   overflow: hidden;
@@ -352,3 +370,4 @@
 .animate-scan {
   animation: scan 2s linear infinite;
 }
+
