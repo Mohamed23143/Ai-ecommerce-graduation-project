@@ -2,12 +2,36 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { IoCloseOutline, IoSearchOutline } from 'react-icons/io5';
 import { useCart } from '../context/CartContext';
-import { allProducts, formatPrice } from '../data/products';
+import { formatPrice } from '../data/products';
+import type { Product } from '../data/products';
+import { fetchProducts, type BackendProduct } from '../services/api';
+
+function toProduct(p: BackendProduct): Product {
+  return { id: p.id, name: p.name, price: p.price, image: p.image, category: p.category };
+}
+
+let cachedProducts: Product[] | null = null;
 
 const SearchOverlay = () => {
   const { isSearchOpen, setIsSearchOpen } = useCart();
   const [query, setQuery] = useState('');
+  const [allProducts, setAllProducts] = useState<Product[]>(cachedProducts || []);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    if (cachedProducts) {
+      setAllProducts(cachedProducts);
+      return;
+    }
+    fetchProducts()
+      .then((list) => {
+        const mapped = list.map(toProduct);
+        cachedProducts = mapped;
+        setAllProducts(mapped);
+      })
+      .catch(() => {});
+  }, [isSearchOpen]);
 
   const results = query.length >= 2
     ? allProducts.filter((p) =>
@@ -108,7 +132,7 @@ const SearchOverlay = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {results.slice(0, 8).map((product, index) => (
                   <Link
-                    to="/product"
+                    to={`/product/${product.id}`}
                     key={product.id}
                     onClick={() => { setIsSearchOpen(false); setQuery(''); }}
                     className="group cursor-pointer search-result-card"
@@ -119,12 +143,18 @@ const SearchOverlay = () => {
                         src={product.image}
                         alt={product.name}
                         className="w-full h-[180px] md:h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          const el = e.target as HTMLImageElement;
+                          el.style.display = 'none';
+                          const parent = el.parentElement!;
+                          if (!parent.querySelector('.search-fallback')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'search-fallback absolute inset-0 flex items-center justify-center bg-gradient-to-br from-stone-200 to-stone-100';
+                            fallback.innerHTML = `<span class="font-serif text-3xl text-dark/30">${product.name.charAt(0)}</span>`;
+                            parent.appendChild(fallback);
+                          }
+                        }}
                       />
-                      {product.tag && (
-                        <span className={`absolute top-2 left-2 ${product.tagColor} text-white text-[9px] font-sans tracking-widest-xl uppercase px-2 py-0.5`}>
-                          {product.tag}
-                        </span>
-                      )}
                     </div>
                     <h3 className="font-serif text-sm text-dark group-hover:text-gold transition-colors duration-200 mb-0.5">
                       {product.name}

@@ -1,22 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
+import ProductSkeleton from '../components/ProductSkeleton';
 import { useRevealOnScroll } from '../hooks/useRevealOnScroll';
+import { fetchProducts, type BackendProduct } from '../services/api';
+import type { Product } from '../data/products';
 
-import { allProducts } from '../data/products';
-
-const newProducts = allProducts.filter(p => p.tag === 'NEW');
+function toProduct(p: BackendProduct): Product {
+  return { id: p.id, name: p.name, price: p.price, image: p.image, category: p.category };
+}
 
 const NewArrivalsPage = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const heroReveal = useRevealOnScroll<HTMLElement>({ threshold: 0.1 });
   const gridReveal = useRevealOnScroll<HTMLDivElement>({ threshold: 0.05 });
 
+  useEffect(() => {
+    fetchProducts()
+      .then((all) => setProducts(all.map(toProduct)))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f9f8f5]">
+      <Helmet>
+        <title>New Arrivals — NASSEG</title>
+        <meta name="description" content="Discover our latest pieces — fresh from the atelier, designed to inspire." />
+      </Helmet>
       <Header backLabel="Back to Home" backTo="/" />
 
-      {/* Hero */}
       <section
         ref={heroReveal.ref}
         className={`relative h-[300px] md:h-[420px] overflow-hidden reveal-element ${heroReveal.isVisible ? 'revealed' : ''}`}
@@ -40,7 +58,6 @@ const NewArrivalsPage = () => {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
       <div className="max-w-8xl mx-auto px-5 lg:px-12 py-6">
         <nav className="text-xs font-sans text-muted">
           <Link to="/" className="hover:text-dark transition-colors">Home</Link>
@@ -49,16 +66,23 @@ const NewArrivalsPage = () => {
         </nav>
       </div>
 
-      {/* Products */}
       <div
         ref={gridReveal.ref}
         className={`max-w-8xl mx-auto px-5 lg:px-12 pb-16 lg:pb-24 reveal-element ${gridReveal.isVisible ? 'revealed' : ''}`}
       >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {newProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+        {loading ? (
+          <ProductSkeleton count={8} />
+        ) : error ? (
+          <p className="text-sm font-sans text-red-500 text-center py-12">
+            Failed to load products. Please try again later.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {products.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
+            ))}
+          </div>
+        )}
       </div>
 
       <Footer />

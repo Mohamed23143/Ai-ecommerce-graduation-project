@@ -1,22 +1,22 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createWorker } from 'tesseract.js';
+import { Helmet } from 'react-helmet-async';
+import { useUser, useAuth } from '@clerk/react';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/products';
-import { IoCheckmarkCircle, IoLockClosedOutline, IoArrowBackOutline, IoChevronForwardOutline, IoCameraOutline } from 'react-icons/io5';
+import { placeOrder } from '../services/api';
+import type { OrderResponse } from '../services/api';
+import { IoCheckmarkCircle, IoArrowBackOutline, IoChevronForwardOutline } from 'react-icons/io5';
 
 const CheckoutPage = () => {
   const { items, cartTotal, clearCart } = useCart();
+  const helmetTitle = 'Checkout — NASSEG';
   const [step, setStep] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [scanStatus, setScanStatus] = useState('Position your card...');
 
   // Form state
   const [email, setEmail] = useState('');
@@ -25,10 +25,6 @@ const CheckoutPage = () => {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
 
   useEffect(() => {
     setIsLoaded(true);
@@ -38,97 +34,42 @@ const CheckoutPage = () => {
   const discount = promoApplied ? Math.round(cartTotal * 0.1) : 0;
   const total = cartTotal + shippingCost - discount;
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash' | 'wallet'>('card');
-  const [walletNumber, setWalletNumber] = useState('');
+  const [paymentMethod] = useState<'cash'>('cash');
+  const [submitting, setSubmitting] = useState(false);
+  const [orderError, setOrderError] = useState('');
+  const [orderResult, setOrderResult] = useState<OrderResponse | null>(null);
+  const { user } = useUser();
+  const { getToken } = useAuth();
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    setOrderPlaced(true);
-    setTimeout(() => clearCart(), 100);
-  };
+    if (!user) return;
+    setSubmitting(true);
+    setOrderError('');
 
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  const processImage = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const context = canvasRef.current.getContext('2d');
-    if (!context) return;
-
-    // Set canvas dimensions to video dimensions
-    canvasRef.current.width = videoRef.current.videoWidth;
-    canvasRef.current.height = videoRef.current.videoHeight;
-    
-    // Draw current video frame to canvas
-    context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-    setScanStatus('Analyzing...');
-    
     try {
-      const worker = await createWorker('eng');
-      const { data: { text } } = await worker.recognize(canvasRef.current);
-      await worker.terminate();
-
-      // Simple regex to find 16 digit numbers or blocks of 4
-      const cardMatch = text.replace(/\s/g, '').match(/\d{16}/);
-      const expiryMatch = text.match(/\d{2}\/\d{2}/);
-
-      if (cardMatch) {
-        setCardNumber(cardMatch[0].replace(/(\d{4})/g, '$1 ').trim());
-        setScanStatus('Card detected!');
-        if (expiryMatch) setCardExpiry(expiryMatch[0]);
-        
-        setTimeout(() => {
-          setIsScanning(false);
-          stopCamera();
-        }, 1000);
-      } else {
-        setScanStatus('Keep steady...');
-        if (isScanning) setTimeout(processImage, 1000);
-      }
-    } catch (err) {
-      console.error(err);
-      setScanStatus('Error. Try again.');
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      const result = await placeOrder({
+        email,
+        items: items.map((i) => ({ product_id: i.id, quantity: i.quantity })),
+      }, token);
+      setOrderResult(result);
+      setOrderPlaced(true);
+      clearCart();
+    } catch (err: any) {
+      setOrderError(err.message || 'Failed to place order');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleScanCard = async () => {
-    setIsScanning(true);
-    setScanStatus('Initializing camera...');
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
-          setTimeout(processImage, 1000);
-        };
-      }
-    } catch (err) {
-      console.error(err);
-      setScanStatus('Camera access denied');
-      setTimeout(() => setIsScanning(false), 2000);
-    }
-  };
 
-  useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
 
   if (items.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen bg-[#f9f8f5] flex flex-col items-center justify-center p-5">
+        <Helmet><title>{helmetTitle}</title></Helmet>
         <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mb-6">
           <svg className="w-10 h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -144,12 +85,13 @@ const CheckoutPage = () => {
   if (orderPlaced) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-5 text-white">
+        <Helmet><title>Order Confirmed — NASSEG</title></Helmet>
         <div className="w-24 h-24 rounded-full bg-gold/20 flex items-center justify-center mb-8 order-success-pulse">
           <IoCheckmarkCircle className="w-12 h-12 text-gold" />
         </div>
         <h1 className="font-serif text-4xl lg:text-5xl italic mb-4">Order Received</h1>
         <p className="text-white/60 font-sans tracking-widest-lg uppercase text-xs mb-10">
-          Order #NSG-{Math.random().toString(36).slice(2, 8).toUpperCase()}
+          Order #NSG-{orderResult?.id.toString().padStart(5, '0')}
         </p>
         <div className="space-y-4 w-full max-w-xs">
           <Link to="/" className="block w-full text-center bg-white text-dark py-4 text-[11px] font-sans tracking-widest-2xl uppercase hover:bg-gold hover:text-white transition-all">Return to Boutique</Link>
@@ -161,6 +103,7 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f9f8f5] flex flex-col lg:flex-row overflow-hidden">
+      <Helmet><title>{helmetTitle}</title></Helmet>
       {/* Left Column: Checkout Form (60%) */}
       <div className={`lg:w-[60%] p-5 lg:p-12 flex flex-col transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0 translate-y-8'}`}>
         <div className="max-w-2xl w-full mx-auto">
@@ -278,128 +221,35 @@ const CheckoutPage = () => {
 
               {step === 3 && (
                 <div className="space-y-8">
-                  {/* Payment Method Selection */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { id: 'card', label: 'Card' },
-                      { id: 'cash', label: 'Cash' },
-                      { id: 'wallet', label: 'Wallet' }
-                    ].map((method) => (
-                      <button
-                        key={method.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(method.id as any)}
-                        className={`py-3 text-[10px] font-sans tracking-widest uppercase border transition-all ${
-                          paymentMethod === method.id 
-                            ? 'border-dark bg-dark text-white' 
-                            : 'border-border-light text-muted hover:border-dark/30'
-                        }`}
-                      >
-                        {method.label}
-                      </button>
-                    ))}
+                  {/* Payment Method - Cash on Delivery */}
+                  <div className="p-6 border border-dashed border-gold/30 bg-gold/5 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-sm font-sans text-dark/80 leading-relaxed text-center">
+                      Cash on Delivery — Please have the exact amount <span className="font-semibold">{formatPrice(total)}</span> ready for our courier upon delivery. 
+                      A verification call may be made before shipping.
+                    </p>
                   </div>
 
-                  {/* Card Payment Details */}
-                  {paymentMethod === 'card' && (
-                    <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div>
-                        <label className="checkout-label">Cardholder Name</label>
-                        <input type="text" value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="JOHN DOE" className="auth-input bg-transparent font-sans tracking-widest uppercase" required />
-                      </div>
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <label className="checkout-label mb-0">Card Number</label>
-                          <button 
-                            type="button" 
-                            className="flex items-center gap-1.5 text-[10px] font-sans text-gold uppercase tracking-widest hover:text-dark transition-colors"
-                            onClick={handleScanCard}
-                          >
-                            <IoCameraOutline className="w-4 h-4" />
-                            Scan Card
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <input 
-                            type="text" 
-                            value={cardNumber} 
-                            onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim())} 
-                            placeholder="4242 4242 4242 4242" 
-                            className="auth-input bg-transparent font-mono" 
-                            maxLength={19}
-                            autoComplete="cc-number"
-                            required 
-                          />
-                          <IoLockClosedOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-muted/40 w-4 h-4" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-5">
-                        <div>
-                          <label className="checkout-label">Expiry</label>
-                          <input 
-                            type="text" 
-                            value={cardExpiry} 
-                            onChange={(e) => {
-                              let v = e.target.value.replace(/\D/g, '');
-                              if (v.length >= 2) v = v.slice(0, 2) + '/' + v.slice(2, 4);
-                              setCardExpiry(v);
-                            }} 
-                            placeholder="MM/YY" 
-                            className="auth-input bg-transparent font-mono" 
-                            maxLength={5}
-                            required 
-                          />
-                        </div>
-                        <div>
-                          <label className="checkout-label">CVC</label>
-                          <input 
-                            type="text" 
-                            value={cardCvc} 
-                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))} 
-                            placeholder="•••" 
-                            className="auth-input bg-transparent font-mono" 
-                            maxLength={4}
-                            required 
-                          />
-                        </div>
-                      </div>
+                  {!user && (
+                    <div className="text-center py-6 border border-gold/30 bg-gold/5 rounded-lg">
+                      <p className="text-sm font-sans text-muted mb-2">Please sign in to complete your purchase.</p>
+                      <Link to="/auth" className="text-gold underline text-xs font-sans">Sign In</Link>
                     </div>
                   )}
-
-                  {/* Wallet Details */}
-                  {paymentMethod === 'wallet' && (
-                    <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div>
-                        <label className="checkout-label">Wallet Phone Number</label>
-                        <input 
-                          type="tel" 
-                          value={walletNumber}
-                          onChange={(e) => setWalletNumber(e.target.value.replace(/\D/g, ''))}
-                          placeholder="01xxxxxxxxx" 
-                          className="auth-input bg-transparent" 
-                          required 
-                        />
+                  {user && <button type="submit" disabled={submitting} className="btn-primary w-full py-5 !mt-10 group relative overflow-hidden">
+                    <span className="relative z-10">
+                      {submitting ? 'Processing…' : `Complete Purchase · ${formatPrice(total)}`}
+                    </span>
+                    {submitting && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-dark">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       </div>
-                      <p className="text-xs font-sans text-muted italic">
-                        You will receive a notification on your phone to confirm the transaction.
-                      </p>
-                    </div>
+                    )}
+                  </button>}
+                  {orderError && (
+                    <p className="text-[10px] font-sans text-red-500 text-center uppercase tracking-widest leading-relaxed">
+                      {orderError}
+                    </p>
                   )}
-
-                  {/* Cash Details */}
-                  {paymentMethod === 'cash' && (
-                    <div className="p-6 border border-dashed border-gold/30 bg-gold/5 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
-                      <p className="text-sm font-sans text-dark/80 leading-relaxed text-center">
-                        Please have the exact amount <span className="font-semibold">{formatPrice(total)}</span> ready for our courier upon delivery. 
-                        A verification call may be made before shipping.
-                      </p>
-                    </div>
-                  )}
-
-                  <button type="submit" className="btn-primary w-full py-5 !mt-10 group relative overflow-hidden">
-                    <span className="relative z-10">Complete Purchase · {formatPrice(total)}</span>
-                    <div className="absolute inset-0 bg-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                  </button>
                   <p className="text-[10px] font-sans text-muted text-center uppercase tracking-widest leading-relaxed">
                     By clicking "Complete Purchase", you agree to our Terms & Conditions.
                   </p>
@@ -486,45 +336,7 @@ const CheckoutPage = () => {
 
         </div>
       </div>
-      {/* Scan Card Overlay */}
-      {isScanning && (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-          <div className="relative w-full max-w-sm aspect-[1.586/1] border-2 border-white/20 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(196,162,101,0.2)] bg-black">
-            {/* Live Camera Feed */}
-            <video 
-              ref={videoRef} 
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-            />
-            
-            <canvas ref={canvasRef} className="hidden" />
 
-            {/* Scanning Line Animation */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gold/30 to-transparent h-1/2 w-full animate-scan pointer-events-none"></div>
-            
-            {/* Corner Brackets */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-gold rounded-tl-md"></div>
-            <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-gold rounded-tr-md"></div>
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-gold rounded-bl-md"></div>
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-gold rounded-br-md"></div>
-          </div>
-          
-          <div className="mt-8 text-center">
-            <h3 className="text-white font-serif text-xl italic mb-2">{scanStatus}</h3>
-            <p className="text-white/60 text-sm font-sans tracking-wide">Align card within the frame</p>
-          </div>
-
-          <button 
-            onClick={() => {
-              setIsScanning(false);
-              stopCamera();
-            }}
-            className="mt-12 text-white/50 hover:text-white text-xs uppercase tracking-widest transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   );
 };

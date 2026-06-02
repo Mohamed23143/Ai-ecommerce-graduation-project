@@ -2,20 +2,27 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 
 interface StickyBottomBarProps {
+  productId: number;
   productImage: string;
   productName: string;
   price: string;
+  productPrice: number;
 }
 
-const StickyBottomBar = ({ productImage, productName, price }: StickyBottomBarProps) => {
+const FALLBACK = '/product-main.png';
+
+const StickyBottomBar = ({ productId, productImage, productName, price, productPrice }: StickyBottomBarProps) => {
   const [added, setAdded] = useState(false);
+  const [imgSrc, setImgSrc] = useState(
+    productImage?.startsWith('http') ? productImage : FALLBACK
+  );
   const { addToCart, setIsCartOpen } = useCart();
 
   const handleAdd = () => {
     addToCart({
-      id: 17,
-      name: 'Belted Cashmere Overcoat',
-      price: 890,
+      id: productId,
+      name: productName,
+      price: productPrice,
       image: productImage,
       size: 'M',
       color: 'Camel',
@@ -37,9 +44,10 @@ const StickyBottomBar = ({ productImage, productName, price }: StickyBottomBarPr
         <div className="flex items-center gap-3">
           <div className="w-10 h-12 overflow-hidden rounded-sm flex-shrink-0 bg-[#eae7e0]">
             <img
-              src={productImage}
+              src={imgSrc}
               alt={productName}
               className="w-full h-full object-cover"
+              onError={() => setImgSrc(FALLBACK)}
             />
           </div>
           <div className="min-w-0">

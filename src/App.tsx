@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { CartProvider } from './context/CartContext';
 import ScrollToTop from './components/ScrollToTop';
 import PageTransition from './components/PageTransition';
@@ -14,14 +15,20 @@ import CollectionsPage from './pages/CollectionsPage';
 import AuthPage from './pages/AuthPage';
 import UserDashboard from './pages/UserDashboard';
 import CheckoutPage from './pages/CheckoutPage';
+import NotFound from './pages/NotFound';
 import InfoPage from './pages/InfoPage';
 import AdminPage from './pages/AdminPage';
 
 function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const title = 'NASSEG — AI-Powered Fashion Boutique';
   return (
     <>
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content="Discover luxury fashion at NASSEG — an AI-powered boutique featuring curated collections, smart recommendations, and seamless shopping." />
+      </Helmet>
       <ScrollToTop />
       <SearchOverlay />
       <CartDrawer />
@@ -47,6 +54,7 @@ function AppContent() {
           <Route path="/sustainability" element={<InfoPage />} />
           <Route path="/privacy-policy" element={<InfoPage />} />
           <Route path="/terms-of-service" element={<InfoPage />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
     </>
@@ -56,6 +64,7 @@ function AppContent() {
 function App() {
   return (
     <CartProvider>
+      <HelmetProvider>
       <Router>
         <Routes>
           <Route path="/admin" element={<AdminPage />} />
@@ -63,6 +72,7 @@ function App() {
           <Route path="/*" element={<AppContent />} />
         </Routes>
       </Router>
+      </HelmetProvider>
     </CartProvider>
   );
 }

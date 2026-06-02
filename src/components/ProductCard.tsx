@@ -1,7 +1,16 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatPrice, type Product } from '../data/products';
 import { IoCartOutline } from 'react-icons/io5';
+
+const PLACEHOLDER_BG = [
+  'from-stone-200 to-stone-100',
+  'from-amber-100 to-amber-50',
+  'from-slate-200 to-slate-100',
+  'from-rose-100 to-rose-50',
+  'from-teal-100 to-teal-50',
+];
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +20,9 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0, layout = 'grid' }: ProductCardProps) => {
   const { addToCart, setIsCartOpen } = useCart();
+  const [broken, setBroken] = useState(false);
+  const initial = product?.name?.charAt(0) || 'P';
+  const bgClass = PLACEHOLDER_BG[(product?.id || 0) % PLACEHOLDER_BG.length];
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -31,12 +43,19 @@ const ProductCard = ({ product, index = 0, layout = 'grid' }: ProductCardProps) 
         style={{ animationDelay: `${index * 0.08}s` }}
       >
         <div className="relative w-32 sm:w-48 aspect-[3/4] bg-[#eae7e0] overflow-hidden flex-shrink-0">
+          {broken ? (
+            <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${bgClass}`}>
+              <span className="font-serif text-3xl text-dark/30">{initial}</span>
+            </div>
+          ) : (
           <img
             src={product.image}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
+            onError={() => setBroken(true)}
           />
+          )}
         </div>
         
         <div className="flex flex-col justify-center flex-1">
@@ -79,12 +98,19 @@ const ProductCard = ({ product, index = 0, layout = 'grid' }: ProductCardProps) 
       style={{ animationDelay: `${index * 0.08}s` }}
     >
       <div className="relative img-zoom mb-4 bg-[#eae7e0] overflow-hidden">
+        {broken ? (
+          <div className={`w-full h-[280px] sm:h-[340px] lg:h-[420px] flex items-center justify-center bg-gradient-to-br ${bgClass}`}>
+            <span className="font-serif text-6xl text-dark/20">{initial}</span>
+          </div>
+        ) : (
         <img
           src={product.image}
           alt={product.name}
           className="w-full h-[280px] sm:h-[340px] lg:h-[420px] object-cover transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
+          onError={() => setBroken(true)}
         />
+        )}
         
         {/* Tag */}
         {product.tag && (

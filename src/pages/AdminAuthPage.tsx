@@ -42,7 +42,9 @@ export default function AdminAuthPage({ onAuth }: AdminAuthPageProps) {
           return;
         }
       }
-      if (email === 'admin@nasseg.com' && password === 'admin123') {
+      const envEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      const envPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+      if (envEmail && envPassword && email === envEmail && password === envPassword) {
         localStorage.setItem('adminSession', JSON.stringify({ name: 'Admin', email, loggedInAt: new Date().toISOString() }));
         onAuth();
         return;
@@ -165,7 +167,9 @@ export default function AdminAuthPage({ onAuth }: AdminAuthPageProps) {
 
           <div className="mt-8 p-4 bg-dark/5 rounded-lg border border-border-light">
             <p className="text-[9px] font-sans tracking-widest-xl uppercase text-muted mb-1">Demo Credentials</p>
-            <p className="text-[11px] font-sans text-muted">admin@nasseg.com / admin123</p>
+            <p className="text-[11px] font-sans text-muted">
+              {import.meta.env.VITE_ADMIN_EMAIL || 'admin@example.com'} / {import.meta.env.VITE_ADMIN_PASSWORD ? 'set in .env' : 'not configured'}
+            </p>
           </div>
         </div>
 

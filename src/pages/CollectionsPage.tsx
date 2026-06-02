@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useRevealOnScroll } from '../hooks/useRevealOnScroll';
@@ -16,7 +18,7 @@ const collections: Collection[] = [
     name: "Women's",
     slug: 'women',
     count: 4,
-    image: 'https://images.unsplash.com/photo-1581044777550-4cfa60707998?w=800&h=600&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&h=600&fit=crop&crop=center',
     description: 'Timeless elegance redefined for the modern woman',
   },
   {
@@ -51,12 +53,31 @@ const collections: Collection[] = [
     name: 'Sale',
     slug: 'sale',
     count: 6,
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=600&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&h=600&fit=crop&crop=center',
     description: 'Timeless luxury at exceptional value',
   },
 ];
 
+const BG_GRADIENTS: Record<string, string> = {
+  women: 'from-rose-100/80 to-amber-100/80',
+  men: 'from-slate-200/80 to-stone-200/80',
+  accessories: 'from-amber-100/80 to-yellow-100/80',
+  eyewear: 'from-sky-100/80 to-indigo-100/80',
+  'new-arrivals': 'from-emerald-100/80 to-teal-100/80',
+  sale: 'from-rose-200/80 to-orange-200/80',
+};
+
+const PLACEHOLDER_INITIALS: Record<string, string> = {
+  women: 'W',
+  men: 'M',
+  accessories: 'A',
+  eyewear: 'E',
+  'new-arrivals': 'N',
+  sale: 'S',
+};
+
 const CollectionCard = ({ collection, index }: { collection: Collection; index: number }) => {
+  const [imgFailed, setImgFailed] = useState(false);
   const reveal = useRevealOnScroll<HTMLAnchorElement>({ threshold: 0.1 });
   const linkTo =
     collection.slug === 'new-arrivals'
@@ -72,12 +93,21 @@ const CollectionCard = ({ collection, index }: { collection: Collection; index: 
       className={`group relative overflow-hidden h-[300px] md:h-[380px] cursor-pointer reveal-element ${reveal.isVisible ? 'revealed' : ''}`}
       style={{ transitionDelay: `${index * 0.1}s` }}
     >
-      <img
-        src={collection.image}
-        alt={collection.name}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        loading="lazy"
-      />
+      {imgFailed ? (
+        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${BG_GRADIENTS[collection.slug] || 'from-stone-200/80 to-stone-100/80'}`}>
+          <span className="font-serif text-7xl md:text-9xl text-dark/10 select-none">
+            {PLACEHOLDER_INITIALS[collection.slug] || collection.name.charAt(0)}
+          </span>
+        </div>
+      ) : (
+        <img
+          src={collection.image}
+          alt={collection.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          loading="lazy"
+          onError={() => setImgFailed(true)}
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/80 transition-colors duration-500" />
 
       {/* Content */}
@@ -108,6 +138,10 @@ const CollectionsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f9f8f5]">
+      <Helmet>
+        <title>Collections — NASSEG</title>
+        <meta name="description" content="Explore curated selections across every category at NASSEG." />
+      </Helmet>
       <Header backLabel="Back to Home" backTo="/" />
 
       {/* Hero */}

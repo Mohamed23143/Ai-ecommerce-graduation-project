@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import { infoData } from '../data/info';
 import { useRevealOnScroll } from '../hooks/useRevealOnScroll';
@@ -28,6 +29,10 @@ const InfoPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f9f8f5] flex flex-col md:flex-row overflow-hidden">
+      <Helmet>
+        <title>{data.title} — NASSEG</title>
+        <meta name="description" content={`Learn more about ${data.title} at NASSEG.`} />
+      </Helmet>
       {/* Left Side: Image & Branding (Sticky-like) */}
       <div className="hidden md:flex md:w-5/12 bg-dark relative overflow-hidden h-screen sticky top-0">
         <div className="absolute inset-0 z-10 bg-black/30" />

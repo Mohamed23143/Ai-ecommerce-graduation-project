@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { allProducts, formatPrice } from '../data/products';
-import { adminStats, recentOrders, adminUsers, categories, monthlyAnalytics, topProducts } from '../data/adminData';
-import type { Order, AdminUser } from '../data/adminData';
-import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAddOutline, IoTrashOutline, IoCheckmarkCircle, IoLogOutOutline } from 'react-icons/io5';
+import { formatPrice } from '../data/products';
+import { fetchAdminStats, fetchAdminOrders, updateOrderStatus, fetchProducts, createAdminProduct, updateAdminProduct, deleteAdminProduct, generateAIDescription, fetchAdminUsers, fetchAdminCategories, fetchMonthlyAnalytics, fetchTopProducts } from '../services/api';
+import type { AdminStats, AdminOrder, BackendProduct, AdminUserInfoExtended, AdminCategory, MonthlyAnalytics, TopProduct } from '../services/api';
+import { uploadProductImage } from '../services/supabase';
+import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAdd, IoTrashOutline, IoCheckmarkCircle, IoLogOutOutline } from 'react-icons/io5';
 import AdminAuthPage from './AdminAuthPage';
 
 type Section = 'dashboard' | 'products' | 'orders' | 'users' | 'categories' | 'analytics' | 'settings';
 
-const statusStyles: Record<Order['status'], string> = {
+const statusStyles: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   processing: 'bg-blue-100 text-blue-800',
   shipped: 'bg-purple-100 text-purple-800',
@@ -141,12 +142,47 @@ export default function AdminPage() {
 }
 
 function Dashboard() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [s, o] = await Promise.all([fetchAdminStats(), fetchAdminOrders()]);
+        if (!cancelled) {
+          setStats(s);
+          setOrders(o);
+        }
+      } catch {
+        // silent — keep defaults
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const avgOrderValue = stats && stats.total_orders > 0
+    ? stats.total_revenue / stats.total_orders
+    : 0;
+
   const cards = [
-    { label: 'Total Products', value: adminStats.totalProducts, icon: IoCubeOutline, color: 'bg-dark' },
-    { label: 'Total Orders', value: adminStats.totalOrders, icon: IoCartOutline, color: 'bg-gold' },
-    { label: 'Total Revenue', value: `$${(adminStats.totalRevenue / 1000).toFixed(1)}K`, icon: IoBagHandleOutline, color: 'bg-dark', change: `+${adminStats.monthlyGrowth}%` },
-    { label: 'Total Users', value: adminStats.totalUsers.toLocaleString(), icon: IoPeopleOutline, color: 'bg-gold' },
+    { label: 'Total Products', value: stats?.total_products ?? '—', icon: IoCubeOutline, color: 'bg-dark' },
+    { label: 'Total Orders', value: stats?.total_orders ?? '—', icon: IoCartOutline, color: 'bg-gold' },
+    { label: 'Total Revenue', value: stats ? `$${(stats.total_revenue / 1000).toFixed(1)}K` : '—', icon: IoBagHandleOutline, color: 'bg-dark' },
+    { label: 'Total Users', value: stats ? stats.total_users.toLocaleString() : '—', icon: IoPeopleOutline, color: 'bg-gold' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -159,7 +195,6 @@ function Dashboard() {
                 <div>
                   <p className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">{card.label}</p>
                   <p className="text-2xl font-serif font-medium text-dark mt-1">{card.value}</p>
-                  {card.change && <span className="text-[11px] text-green-stock font-sans mt-1 inline-block">{card.change} this month</span>}
                 </div>
                 <div className={`w-10 h-10 rounded-lg ${card.color} flex items-center justify-center flex-shrink-0`}>
                   <Icon className="w-5 h-5 text-white" />
@@ -172,20 +207,21 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Top Selling Products</h3>
+          <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Orders by Status</h3>
           <div className="bg-white rounded-lg border border-border-light p-5 space-y-4">
-            {topProducts.map((p, i) => (
-              <div key={p.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-lg bg-cream-dark flex items-center justify-center text-[10px] font-sans font-medium text-muted">{i + 1}</span>
-                  <div>
-                    <p className="text-sm font-sans text-dark">{p.name}</p>
-                    <p className="text-[11px] text-muted">{p.sales} sales</p>
+            {stats && Object.keys(stats.orders_by_status).length > 0 ? (
+              Object.entries(stats.orders_by_status).map(([status, count], i) => (
+                <div key={status} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-cream-dark flex items-center justify-center text-[10px] font-sans font-medium text-muted">{i + 1}</span>
+                    <p className="text-sm font-sans text-dark capitalize">{status}</p>
                   </div>
+                  <span className="text-sm font-sans font-medium text-dark">{count} order{count !== 1 ? 's' : ''}</span>
                 </div>
-                <span className="text-sm font-sans font-medium text-dark">{formatPrice(p.revenue)}</span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm font-sans text-muted text-center py-4">No orders yet</p>
+            )}
           </div>
         </div>
 
@@ -193,18 +229,15 @@ function Dashboard() {
           <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Quick Stats</h3>
           <div className="bg-white rounded-lg border border-border-light p-5 space-y-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Conversion Rate</span>
-              <span className="text-sm font-sans font-medium text-dark">{adminStats.conversionRate}%</span>
-            </div>
-            <div className="w-full h-px bg-border-light" />
-            <div className="flex items-center justify-between">
               <span className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Avg. Order Value</span>
-              <span className="text-sm font-sans font-medium text-dark">{formatPrice(adminStats.avgOrderValue)}</span>
+              <span className="text-sm font-sans font-medium text-dark">
+                {stats && stats.total_orders > 0 ? formatPrice(avgOrderValue) : '—'}
+              </span>
             </div>
             <div className="w-full h-px bg-border-light" />
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Categories</span>
-              <span className="text-sm font-sans font-medium text-dark">{adminStats.totalCategories}</span>
+              <span className="text-sm font-sans font-medium text-dark">{stats?.total_products ? 'See Products tab' : '—'}</span>
             </div>
           </div>
         </div>
@@ -213,6 +246,11 @@ function Dashboard() {
       <div>
         <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Recent Orders</h3>
         <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+          {orders.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sm font-sans text-muted">No orders have been placed yet.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm font-sans">
               <thead>
@@ -226,24 +264,25 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.slice(0, 5).map(order => (
+                {orders.slice(0, 5).map(order => (
                   <tr key={order.id} className="border-b border-border-light last:border-b-0 hover:bg-cream/50 transition-colors">
-                    <td className="px-5 py-3.5 text-dark font-medium">{order.id}</td>
+                    <td className="px-5 py-3.5 text-dark font-medium">#NSG-{String(order.id).padStart(5, '0')}</td>
                     <td className="px-5 py-3.5">
-                      <p className="text-dark">{order.customer}</p>
-                      <p className="text-[11px] text-muted">{order.email}</p>
+                      <p className="text-dark">{order.user.email.split('@')[0]}</p>
+                      <p className="text-[11px] text-muted">{order.user.email}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-dark">{order.items}</td>
-                    <td className="px-5 py-3.5 text-dark">{formatPrice(order.total)}</td>
+                    <td className="px-5 py-3.5 text-dark">{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                    <td className="px-5 py-3.5 text-dark">{formatPrice(order.total_amount)}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[order.status]}`}>{order.status}</span>
+                      <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[order.status] || statusStyles.pending}`}>{order.status}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-muted text-[11px]">{order.date}</td>
+                    <td className="px-5 py-3.5 text-muted text-[11px]">{new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </div>
@@ -251,13 +290,123 @@ function Dashboard() {
 }
 
 function Products() {
+  const [products, setProducts] = useState<BackendProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [editingProduct, setEditingProduct] = useState<typeof allProducts[0] | null>(null);
+  const [editTarget, setEditTarget] = useState<BackendProduct | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '', image: '', stock_quantity: '', sizes: '', colors: '' });
 
-  const filtered = allProducts.filter(p =>
+  const loadProducts = () => {
+    setLoading(true);
+    fetchProducts()
+      .then(setProducts)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadProducts(); }, []);
+
+  const openEdit = (p: BackendProduct) => {
+    setForm({ name: p.name, description: p.description, price: String(p.price), category: p.category, image: p.image, stock_quantity: String(p.stock_quantity), sizes: (p.sizes || []).join(', '), colors: (p.colors || []).join(', ') });
+    setImageFile(null);
+    setEditTarget(p);
+  };
+
+  const openAdd = () => {
+    setForm({ name: '', description: '', price: '', category: 'women', image: '', stock_quantity: '10', sizes: '', colors: '' });
+    setImageFile(null);
+    setAddOpen(true);
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!form.name || !form.category) {
+      alert('Please fill in the product name and category first.');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { description } = await generateAIDescription(form.name, form.category);
+      setForm(f => ({ ...f, description }));
+    } catch (err: any) {
+      alert(err.message || 'Failed to generate description');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    let imageUrl = form.image || '';
+    try {
+      if (imageFile) {
+        setUploading(true);
+        try {
+          imageUrl = await uploadProductImage(imageFile);
+        } catch (uploadErr: any) {
+          console.error("DETAILED_UPLOAD_ERROR:", uploadErr);
+          alert("Upload failed: " + (uploadErr.message || "Unknown error"));
+          setUploading(false);
+          setSaving(false);
+          return;
+        }
+        setUploading(false);
+      }
+      const payload = {
+        name: form.name,
+        description: form.description || '',
+        price: Number(form.price),
+        category: form.category,
+        image: imageUrl,
+        stock_quantity: form.stock_quantity ? Number(form.stock_quantity) : 0,
+        sizes: form.sizes ? form.sizes.split(',').map(s => s.trim()).filter(Boolean) : [],
+        colors: form.colors ? form.colors.split(',').map(s => s.trim()).filter(Boolean) : [],
+      };
+      if (editTarget) {
+        await updateAdminProduct(editTarget.id, payload);
+      } else {
+        await createAdminProduct(payload);
+      }
+      setEditTarget(null);
+      setAddOpen(false);
+      loadProducts();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save product');
+    } finally {
+      setSaving(false);
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (p: BackendProduct) => {
+    if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+    try {
+      await deleteAdminProduct(p.id);
+      loadProducts();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete product');
+    }
+  };
+
+  const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.category.toLowerCase().includes(search.toLowerCase())
   );
+
+  const modalOpen = editTarget || addOpen;
+  const modalTitle = editTarget ? 'Edit Product' : 'Add Product';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -270,13 +419,18 @@ function Products() {
           />
         </div>
         <span className="text-[11px] text-muted font-sans">{filtered.length} products</span>
-        <button className="ml-auto flex items-center gap-2 text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-all duration-300">
-          <IoAddOutline className="w-3.5 h-3.5" />
+        <button onClick={openAdd} className="ml-auto flex items-center gap-2 text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-all duration-300">
+          <IoAdd className="w-3.5 h-3.5" />
           Add Product
         </button>
       </div>
 
       <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm font-sans text-muted">No products found.</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-sans">
             <thead>
@@ -284,8 +438,8 @@ function Products() {
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Product</th>
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Category</th>
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Price</th>
-                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Tag</th>
-                <th className="w-20 px-5 py-3" />
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Stock</th>
+                <th className="w-32 px-5 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -300,64 +454,118 @@ function Products() {
                   <td className="px-5 py-3.5 text-muted capitalize">{product.category}</td>
                   <td className="px-5 py-3.5">
                     <span className="text-dark">{formatPrice(product.price)}</span>
-                    {product.originalPrice && <span className="text-muted text-[11px] line-through ml-2">{formatPrice(product.originalPrice)}</span>}
                   </td>
                   <td className="px-5 py-3.5">
-                    {product.tag ? (
-                      <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2 py-0.5 rounded text-white ${product.tagColor || 'bg-dark'}`}>{product.tag}</span>
-                    ) : (
-                      <span className="text-muted/40 text-[11px]">—</span>
-                    )}
+                    <span className={`text-[10px] font-sans ${product.stock_quantity > 0 ? 'text-green-stock' : 'text-red-500'}`}>
+                      {product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : 'Out of stock'}
+                    </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <button onClick={() => setEditingProduct(product)}
-                      className="text-[10px] font-sans tracking-widest-xl uppercase text-muted hover:text-dark transition-colors">
-                      Edit
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openEdit(product)}
+                        className="text-[10px] font-sans tracking-widest-xl uppercase text-muted hover:text-dark transition-colors">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(product)}
+                        className="text-[10px] font-sans tracking-widest-xl uppercase text-red-400 hover:text-red-600 transition-colors">
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
-      {editingProduct && (
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/30" onClick={() => setEditingProduct(null)} />
-          <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-lg p-6">
+          <div className="fixed inset-0 bg-black/30" onClick={() => { setEditTarget(null); setAddOpen(false); }} />
+          <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-serif italic font-medium text-dark">Edit Product</h3>
-              <button onClick={() => setEditingProduct(null)} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
+              <h3 className="text-sm font-serif italic font-medium text-dark">{modalTitle}</h3>
+              <button onClick={() => { setEditTarget(null); setAddOpen(false); }} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
                 <IoClose className="w-3.5 h-3.5 text-muted" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Product Name</label>
-                <input type="text" defaultValue={editingProduct.name}
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted">Description</label>
+                  <button type="button" onClick={handleGenerateDescription} disabled={aiLoading}
+                    className="text-[10px] font-sans tracking-widest uppercase text-gold hover:text-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                    {aiLoading ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                        Generating…
+                      </>
+                    ) : (
+                      <>Generate with AI ✨</>
+                    )}
+                  </button>
+                </div>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors resize-none" rows={3} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Price</label>
-                  <input type="number" defaultValue={editingProduct.price}
+                  <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Price ($)</label>
+                  <input type="number" min={0} step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
                     className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Category</label>
-                  <input type="text" defaultValue={editingProduct.category}
+                  <input type="text" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                     className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
                 </div>
               </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Product Image</label>
+                <div className="flex items-center gap-3">
+                  <input id="image-upload" type="file" accept="image/*" disabled={uploading} onChange={e => setImageFile(e.target.files?.[0] || null)} className="hidden" />
+                  <label htmlFor="image-upload" className="inline-block text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                    Choose Image
+                  </label>
+                  {form.image && !imageFile && (
+                    <span className="text-[10px] text-muted">Current: {form.image.split('/').pop()}</span>
+                  )}
+                  {imageFile && (
+                    <span className="text-[10px] text-green-stock">Selected: {imageFile.name}</span>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Stock Quantity</label>
+                  <input type="number" min={0} value={form.stock_quantity} onChange={e => setForm(f => ({ ...f, stock_quantity: e.target.value }))}
+                    className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Sizes (comma-separated)</label>
+                <input type="text" value={form.sizes} onChange={e => setForm(f => ({ ...f, sizes: e.target.value }))} placeholder="XS, S, M, L, XL"
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Colors (comma-separated)</label>
+                <input type="text" value={form.colors} onChange={e => setForm(f => ({ ...f, colors: e.target.value }))} placeholder="Black, Natural, Cream"
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors" />
+              </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setEditingProduct(null)}
+                <button onClick={() => { setEditTarget(null); setAddOpen(false); }}
                   className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 border border-border-light rounded-lg hover:border-dark transition-colors">
                   Cancel
                 </button>
-                <button onClick={() => setEditingProduct(null)}
-                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-colors">
-                  Save Changes
+                <button onClick={handleSave} disabled={saving || uploading || !form.name || !form.price}
+                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  {uploading ? 'Uploading image…' : saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Product'}
                 </button>
               </div>
             </div>
@@ -369,13 +577,52 @@ function Products() {
 }
 
 function Orders() {
+  const [allOrders, setAllOrders] = useState<AdminOrder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [statusLoading, setStatusLoading] = useState<number | null>(null);
+  const [statusError, setStatusError] = useState('');
 
-  const filtered = recentOrders.filter(o =>
-    o.customer.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminOrders()
+      .then((o) => { if (!cancelled) setAllOrders(o); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = allOrders.filter(o =>
+    o.user.email.toLowerCase().includes(search.toLowerCase()) ||
+    `#NSG-${String(o.id).padStart(5, '0')}`.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleStatusChange = async (orderId: number, newStatus: string) => {
+    setStatusLoading(orderId);
+    setStatusError('');
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      setAllOrders(prev =>
+        prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o))
+      );
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err: any) {
+      setStatusError(err.message || 'Failed to update status');
+    } finally {
+      setStatusLoading(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -390,7 +637,18 @@ function Orders() {
         <span className="text-[11px] text-muted font-sans">{filtered.length} orders</span>
       </div>
 
+      {statusError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-[11px] font-sans text-red-700">
+          {statusError}
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm font-sans text-muted">No orders found.</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-sans">
             <thead>
@@ -407,23 +665,24 @@ function Orders() {
             <tbody>
               {filtered.map(order => (
                 <tr key={order.id} className="border-b border-border-light hover:bg-cream/50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
-                  <td className="px-5 py-3.5 text-dark font-medium">{order.id}</td>
+                  <td className="px-5 py-3.5 text-dark font-medium">#NSG-{String(order.id).padStart(5, '0')}</td>
                   <td className="px-5 py-3.5">
-                    <p className="text-dark">{order.customer}</p>
-                    <p className="text-[11px] text-muted">{order.email}</p>
+                    <p className="text-dark">{order.user.email.split('@')[0]}</p>
+                    <p className="text-[11px] text-muted">{order.user.email}</p>
                   </td>
-                  <td className="px-5 py-3.5 text-dark">{order.items}</td>
-                  <td className="px-5 py-3.5 text-dark">{formatPrice(order.total)}</td>
+                  <td className="px-5 py-3.5 text-dark">{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                  <td className="px-5 py-3.5 text-dark">{formatPrice(order.total_amount)}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[order.status]}`}>{order.status}</span>
+                    <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[order.status] || statusStyles.pending}`}>{order.status}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-muted text-[11px]">{order.date}</td>
+                  <td className="px-5 py-3.5 text-muted text-[11px]">{new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                   <td className="px-5 py-3.5"><IoChevronDown className="w-3.5 h-3.5 text-muted" /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {selectedOrder && (
@@ -431,7 +690,7 @@ function Orders() {
           <div className="fixed inset-0 bg-black/30" onClick={() => setSelectedOrder(null)} />
           <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-serif italic font-medium text-dark">{selectedOrder.id}</h3>
+              <h3 className="text-sm font-serif italic font-medium text-dark">Order #NSG-{String(selectedOrder.id).padStart(5, '0')}</h3>
               <button onClick={() => setSelectedOrder(null)} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
                 <IoClose className="w-3.5 h-3.5 text-muted" />
               </button>
@@ -440,45 +699,58 @@ function Orders() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Customer</p>
-                  <p className="text-sm text-dark">{selectedOrder.customer}</p>
-                  <p className="text-[11px] text-muted">{selectedOrder.email}</p>
+                  <p className="text-sm text-dark">{selectedOrder.user.email.split('@')[0]}</p>
+                  <p className="text-[11px] text-muted">{selectedOrder.user.email}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Status</p>
-                  <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[selectedOrder.status]}`}>{selectedOrder.status}</span>
+                  <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2.5 py-1 rounded-md ${statusStyles[selectedOrder.status] || statusStyles.pending}`}>{selectedOrder.status}</span>
                 </div>
               </div>
               <div className="w-full h-px bg-border-light" />
               <div>
-                <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Shipping Address</p>
-                <p className="text-sm text-dark">{selectedOrder.address}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Payment</p>
-                <p className="text-sm text-dark">{selectedOrder.payment}</p>
+                <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Items</p>
+                <div className="space-y-2">
+                  {selectedOrder.items.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 py-1">
+                      <div className="w-10 h-12 bg-[#eae7e0] rounded overflow-hidden flex-shrink-0">
+                        <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-sans text-dark truncate">{item.product_name}</p>
+                        <p className="text-[10px] text-muted">Qty: {item.quantity} · {formatPrice(item.price_at_purchase)} each</p>
+                      </div>
+                      <span className="text-sm font-serif text-dark">{formatPrice(item.price_at_purchase * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Items</p>
-                  <p className="text-sm text-dark">{selectedOrder.items}</p>
+                  <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Total Items</p>
+                  <p className="text-sm text-dark">{selectedOrder.items.reduce((s, i) => s + i.quantity, 0)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1">Total</p>
-                  <p className="text-sm font-medium text-dark">{formatPrice(selectedOrder.total)}</p>
+                  <p className="text-sm font-medium text-dark">{formatPrice(selectedOrder.total_amount)}</p>
                 </div>
               </div>
               <div className="w-full h-px bg-border-light" />
               <div>
                 <p className="text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-2">Update Status</p>
                 <div className="flex flex-wrap gap-2">
-                  {(['pending', 'processing', 'shipped', 'delivered'] as const).map(status => (
-                    <button key={status} onClick={() => setSelectedOrder(null)}
+                  {(['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const).map(status => (
+                    <button
+                      key={status}
+                      disabled={statusLoading === selectedOrder.id}
+                      onClick={() => handleStatusChange(selectedOrder.id, status)}
                       className={`text-[10px] font-sans tracking-widest-xl uppercase px-3 py-1.5 rounded-lg border transition-all duration-200 ${
                         selectedOrder.status === status
                           ? 'bg-dark text-white border-dark'
                           : 'border-border-light text-muted hover:border-dark hover:text-dark'
-                      }`}>
-                      {status}
+                      } disabled:opacity-40 disabled:cursor-not-allowed`}
+                    >
+                      {statusLoading === selectedOrder.id && status === selectedOrder.status ? 'Updating…' : status}
                     </button>
                   ))}
                 </div>
@@ -492,13 +764,33 @@ function Orders() {
 }
 
 function Users() {
+  const [users, setUsers] = useState<AdminUserInfoExtended[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUserInfoExtended | null>(null);
 
-  const filtered = adminUsers.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminUsers()
+      .then(data => { if (!cancelled) setUsers(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = users.filter(u =>
     u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const userInitial = (email: string) => email.charAt(0).toUpperCase();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -514,15 +806,18 @@ function Users() {
       </div>
 
       <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm font-sans text-muted">No users found.</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-sans">
             <thead>
               <tr className="border-b border-border-light bg-cream-dark/50">
-                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Name</th>
-                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Email</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">User</th>
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Orders</th>
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Total Spent</th>
-                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Status</th>
                 <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Joined</th>
               </tr>
             </thead>
@@ -531,22 +826,22 @@ function Users() {
                 <tr key={user.id} className="border-b border-border-light last:border-b-0 hover:bg-cream/50 transition-colors cursor-pointer" onClick={() => setSelectedUser(user)}>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-dark flex items-center justify-center text-white text-xs font-sans font-medium">{user.name.charAt(0)}</div>
-                      <p className="text-dark font-medium">{user.name}</p>
+                      <div className="w-8 h-8 rounded-lg bg-dark flex items-center justify-center text-white text-xs font-sans font-medium">{userInitial(user.email)}</div>
+                      <div>
+                        <p className="text-dark font-medium">{user.email.split('@')[0]}</p>
+                        <p className="text-[11px] text-muted">{user.email}</p>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-muted">{user.email}</td>
-                  <td className="px-5 py-3.5 text-dark">{user.orders}</td>
-                  <td className="px-5 py-3.5 text-dark">{formatPrice(user.spent)}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2 py-0.5 rounded ${user.status === 'active' ? 'text-green-stock bg-green-100' : 'text-muted bg-cream-dark'}`}>{user.status}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-muted text-[11px]">{user.joined}</td>
+                  <td className="px-5 py-3.5 text-dark">{user.order_count}</td>
+                  <td className="px-5 py-3.5 text-dark">{formatPrice(user.total_spent)}</td>
+                  <td className="px-5 py-3.5 text-muted text-[11px]">{new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {selectedUser && (
@@ -554,30 +849,26 @@ function Users() {
           <div className="fixed inset-0 bg-black/30" onClick={() => setSelectedUser(null)} />
           <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-serif italic font-medium text-dark">{selectedUser.name}</h3>
+              <h3 className="text-sm font-serif italic font-medium text-dark">{selectedUser.email.split('@')[0]}</h3>
               <button onClick={() => setSelectedUser(null)} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
                 <IoClose className="w-3.5 h-3.5 text-muted" />
               </button>
             </div>
             <div className="flex items-center gap-4 mb-5">
-              <div className="w-12 h-12 rounded-lg bg-dark flex items-center justify-center text-white text-lg font-sans font-medium">{selectedUser.name.charAt(0)}</div>
+              <div className="w-12 h-12 rounded-lg bg-dark flex items-center justify-center text-white text-lg font-sans font-medium">{userInitial(selectedUser.email)}</div>
               <div>
-                <p className="text-sm font-medium text-dark">{selectedUser.name}</p>
+                <p className="text-sm font-medium text-dark">{selectedUser.email.split('@')[0]}</p>
                 <p className="text-[11px] text-muted">{selectedUser.email}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 p-4 bg-cream rounded-lg">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-cream rounded-lg">
               <div className="text-center">
-                <p className="text-lg font-serif font-medium text-dark">{selectedUser.orders}</p>
+                <p className="text-lg font-serif font-medium text-dark">{selectedUser.order_count}</p>
                 <p className="text-[9px] font-sans tracking-widest-xl uppercase text-muted">Orders</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-serif font-medium text-dark">{formatPrice(selectedUser.spent)}</p>
+                <p className="text-lg font-serif font-medium text-dark">{formatPrice(selectedUser.total_spent)}</p>
                 <p className="text-[9px] font-sans tracking-widest-xl uppercase text-muted">Spent</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-serif font-medium text-dark capitalize">{selectedUser.status}</p>
-                <p className="text-[9px] font-sans tracking-widest-xl uppercase text-muted">Status</p>
               </div>
             </div>
           </div>
@@ -588,191 +879,177 @@ function Users() {
 }
 
 function Categories() {
-  const [search, setSearch] = useState('');
-  const [categoryList, setCategoryList] = useState(categories);
-  const [showAdd, setShowAdd] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', slug: '' });
+  const [cats, setCats] = useState<AdminCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
 
-  const filtered = categoryList.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.slug.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminCategories()
+      .then(data => { if (!cancelled) setCats(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-  const addCategory = () => {
-    if (!newCat.name || !newCat.slug) return;
-    setCategoryList(prev => [...prev, { id: Date.now(), name: newCat.name, slug: newCat.slug, products: 0, created: new Date().toISOString().split('T')[0] }]);
-    setNewCat({ name: '', slug: '' });
-    setShowAdd(false);
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    const slug = newName.toLowerCase().replace(/\s+/g, '-');
+    setCats(prev => [...prev, { name: newName.trim(), slug, product_count: 0 }]);
+    setNewName('');
   };
 
-  const deleteCategory = (id: number) => {
-    setCategoryList(prev => prev.filter(c => c.id !== id));
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <IoSearchOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search categories..."
+          <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="New category name..."
             className="w-full bg-white border border-border-light rounded-lg pl-10 pr-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40"
           />
         </div>
-        <span className="text-[11px] text-muted font-sans">{filtered.length} categories</span>
-        <button onClick={() => setShowAdd(true)}
-          className="ml-auto flex items-center gap-2 text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-all duration-300">
-          <IoAddOutline className="w-3.5 h-3.5" />
-          Add Category
+        <button onClick={handleAdd} className="flex items-center gap-1.5 px-4 py-2.5 bg-dark text-white text-[10px] font-sans tracking-widest-xl uppercase rounded-lg hover:bg-dark/90 transition-colors">
+          <IoAdd className="w-3.5 h-3.5" /> Add
         </button>
+        <span className="text-[11px] text-muted font-sans">{cats.length} categories</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(cat => (
-          <div key={cat.id} className="bg-white rounded-lg border border-border-light p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="text-sm font-sans font-medium text-dark capitalize">{cat.name}</h4>
-                <p className="text-[11px] text-muted mt-0.5">/{cat.slug}</p>
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-[10px] font-sans tracking-widest-xl uppercase text-muted bg-cream-dark px-2 py-0.5 rounded">{cat.products} products</span>
-                  <span className="text-[10px] text-muted">{cat.created}</span>
-                </div>
-              </div>
-              <button onClick={() => deleteCategory(cat.id)}
-                className="w-7 h-7 rounded-lg border border-border-light flex items-center justify-center hover:border-red-400 hover:text-red-500 transition-colors flex-shrink-0">
-                <IoTrashOutline className="w-3.5 h-3.5 text-muted hover:text-red-500" />
-              </button>
-            </div>
+      <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+        {cats.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm font-sans text-muted">No categories found.</p>
           </div>
-        ))}
-      </div>
-
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
-          <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-serif italic font-medium text-dark">Add Category</h3>
-              <button onClick={() => setShowAdd(false)} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
-                <IoClose className="w-3.5 h-3.5 text-muted" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Category Name</label>
-                <input type="text" value={newCat.name} onChange={e => setNewCat(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. Swimwear"
-                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Slug</label>
-                <input type="text" value={newCat.slug} onChange={e => setNewCat(prev => ({ ...prev, slug: e.target.value }))}
-                  placeholder="e.g. swimwear"
-                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40" />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowAdd(false)}
-                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 border border-border-light rounded-lg hover:border-dark transition-colors">
-                  Cancel
-                </button>
-                <button onClick={addCategory}
-                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-colors">
-                  Add Category
-                </button>
-              </div>
-            </div>
-          </div>
+        ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm font-sans">
+            <thead>
+              <tr className="border-b border-border-light bg-cream-dark/50">
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Name</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Slug</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Products</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cats.map(cat => (
+                <tr key={cat.slug} className="border-b border-border-light last:border-b-0 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3.5 text-dark font-medium">{cat.name}</td>
+                  <td className="px-5 py-3.5 text-muted">{cat.slug}</td>
+                  <td className="px-5 py-3.5 text-dark">{cat.product_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
 function Analytics() {
-  const maxRevenue = Math.max(...monthlyAnalytics.map(m => m.revenue));
-  const maxOrders = Math.max(...monthlyAnalytics.map(m => m.orders));
+  const [monthlyData, setMonthlyData] = useState<MonthlyAnalytics[]>([]);
+  const [topProductsData, setTopProductsData] = useState<TopProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchMonthlyAnalytics(), fetchTopProducts()])
+      .then(([m, t]) => {
+        if (!cancelled) {
+          setMonthlyData(m);
+          setTopProductsData(t);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1);
+  const maxSales = Math.max(...topProductsData.map(t => t.sales), 1);
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-border-light p-5">
-          <p className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Total Revenue (YTD)</p>
-          <p className="text-2xl font-serif font-medium text-dark mt-1">${adminStats.totalRevenue.toLocaleString()}</p>
-          <span className="text-[11px] text-green-stock font-sans mt-1 inline-block">+{adminStats.monthlyGrowth}% vs last year</span>
-        </div>
-        <div className="bg-white rounded-lg border border-border-light p-5">
-          <p className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Total Orders (YTD)</p>
-          <p className="text-2xl font-serif font-medium text-dark mt-1">{adminStats.totalOrders}</p>
-          <span className="text-[11px] text-green-stock font-sans mt-1 inline-block">+8.3% vs last year</span>
-        </div>
-        <div className="bg-white rounded-lg border border-border-light p-5">
-          <p className="text-[11px] font-sans tracking-widest-xl uppercase text-muted">Avg. Order Value</p>
-          <p className="text-2xl font-serif font-medium text-dark mt-1">{formatPrice(adminStats.avgOrderValue)}</p>
-          <span className="text-[11px] text-muted font-sans mt-1 inline-block">Stable vs last year</span>
-        </div>
-      </div>
-
+      {/* Monthly Revenue Chart */}
       <div>
         <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Monthly Revenue</h3>
-        <div className="bg-white rounded-lg border border-border-light p-5">
-          <div className="flex items-end justify-between gap-1 h-40">
-            {monthlyAnalytics.map(m => (
-              <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
-                <div className="w-full bg-gold/20 rounded-t-sm relative" style={{ height: `${(m.revenue / maxRevenue) * 100}%` }}>
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-dark text-white text-[10px] px-2 py-0.5 rounded font-sans">
-                    ${m.revenue.toLocaleString()}
+        <div className="bg-white rounded-lg border border-border-light p-6">
+          {monthlyData.length === 0 ? (
+            <p className="text-center text-sm text-muted font-sans py-8">No revenue data yet.</p>
+          ) : (
+          <div className="flex items-end gap-1.5 h-52">
+            {monthlyData.map((item, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                <span className="text-[9px] font-sans text-muted">{formatPrice(item.revenue)}</span>
+                <div
+                  className="w-full bg-dark/10 hover:bg-dark/20 transition-colors rounded-t cursor-pointer relative group"
+                  style={{ height: `${(item.revenue / maxRevenue) * 100}%` }}
+                >
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-dark text-white text-[9px] font-sans px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {formatPrice(item.revenue)}
                   </div>
-                  <div className="w-full h-full bg-gold rounded-t-sm opacity-0 hover:opacity-100 transition-opacity" />
                 </div>
-                <span className="text-[9px] text-muted font-sans">{m.month}</span>
+                <span className="text-[9px] font-sans text-muted mt-1">{item.month}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="w-3 h-3 rounded bg-gold/30" />
-            <span className="text-[10px] text-muted font-sans">Monthly revenue in USD</span>
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Top Products</h3>
-          <div className="bg-white rounded-lg border border-border-light p-5 space-y-4">
-            {topProducts.map((p, i) => (
-              <div key={p.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-lg bg-cream-dark flex items-center justify-center text-[10px] font-sans font-medium text-muted">{i + 1}</span>
-                  <p className="text-sm font-sans text-dark">{p.name}</p>
-                </div>
-                <span className="text-sm font-sans font-medium text-dark">{formatPrice(p.revenue)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Monthly Orders</h3>
-          <div className="bg-white rounded-lg border border-border-light p-5">
-            <div className="flex items-end justify-between gap-1 h-32">
-              {monthlyAnalytics.map(m => (
-                <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  <div className="w-full bg-dark/10 rounded-t-sm relative" style={{ height: `${(m.orders / maxOrders) * 100}%` }}>
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-dark text-white text-[10px] px-2 py-0.5 rounded font-sans">
-                      {m.orders} orders
-                    </div>
-                    <div className="w-full h-full bg-dark rounded-t-sm opacity-0 hover:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-[9px] text-muted font-sans">{m.month}</span>
-                </div>
-              ))}
+      {/* Top Products */}
+      <div>
+        <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Top Products</h3>
+        <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+          {topProductsData.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sm font-sans text-muted">No product data yet.</p>
             </div>
-            <div className="flex items-center gap-2 mt-4">
-              <div className="w-3 h-3 rounded bg-dark/20" />
-              <span className="text-[10px] text-muted font-sans">Monthly order count</span>
-            </div>
+          ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-sans">
+              <thead>
+                <tr className="border-b border-border-light bg-cream-dark/50">
+                  <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Product</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Sales</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Revenue</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Performance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProductsData.map((product, i) => (
+                  <tr key={i} className="border-b border-border-light last:border-b-0 hover:bg-cream/50 transition-colors">
+                    <td className="px-5 py-3.5 text-dark font-medium">{product.name}</td>
+                    <td className="px-5 py-3.5 text-dark">{product.sales}</td>
+                    <td className="px-5 py-3.5 text-dark">{formatPrice(product.revenue)}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="w-32 bg-cream-dark rounded-full h-1.5">
+                        <div className="bg-dark h-1.5 rounded-full" style={{ width: `${(product.sales / maxSales) * 100}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          )}
         </div>
       </div>
     </div>

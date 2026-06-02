@@ -9,19 +9,19 @@ interface Category {
 const categories: Category[] = [
   {
     name: "Women's",
-    image: 'https://images.unsplash.com/photo-1581044777550-4cfa60707998?w=800&h=900&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=800&auto=format&fit=crop',
   },
   {
     name: "Men's",
-    image: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&h=900&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop',
   },
   {
     name: 'Accessories',
-    image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&h=500&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=800&auto=format&fit=crop',
   },
   {
     name: 'Eyewear',
-    image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&h=500&fit=crop&crop=center',
+    image: 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?q=80&w=800&auto=format&fit=crop',
   },
 ];
 

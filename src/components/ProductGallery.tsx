@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 interface ProductGalleryProps {
   images: string[];
 }
+
+const FALLBACK = '/product-main.png';
 
 const thumbLabels = ['Front', 'Side', 'Back', 'Detail'];
 
@@ -10,6 +12,14 @@ const ProductGallery = ({ images }: ProductGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
+
+  const handleImgError = useCallback((index: number) => {
+    const el = imgRefs.current[index];
+    if (el && el.src !== FALLBACK) {
+      el.src = FALLBACK;
+    }
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isZoomed) return;
@@ -35,9 +45,11 @@ const ProductGallery = ({ images }: ProductGalleryProps) => {
             aria-label={`View ${thumbLabels[index] || `image ${index + 1}`}`}
           >
             <img
-              src={img}
+              ref={el => { imgRefs.current[index] = el; }}
+              src={img?.startsWith('http') ? img : FALLBACK}
               alt={`Product ${thumbLabels[index] || `view ${index + 1}`}`}
               className="w-full h-full object-cover"
+              onError={() => handleImgError(index)}
             />
             {/* Label overlay */}
             <span className="absolute bottom-0 left-0 right-0 bg-dark/60 text-white text-[9px] font-sans tracking-wider uppercase text-center py-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -55,7 +67,8 @@ const ProductGallery = ({ images }: ProductGalleryProps) => {
         onMouseMove={handleMouseMove}
       >
         <img
-          src={images[selectedIndex]}
+          ref={el => { imgRefs.current[selectedIndex] = el; }}
+          src={images[selectedIndex]?.startsWith('http') ? images[selectedIndex] : FALLBACK}
           alt="Product main view"
           className="w-full h-[500px] sm:h-[600px] lg:h-[650px] object-cover transition-all duration-500"
           style={
@@ -66,6 +79,7 @@ const ProductGallery = ({ images }: ProductGalleryProps) => {
                 }
               : {}
           }
+          onError={() => handleImgError(selectedIndex)}
         />
 
         {/* Mobile dots */}

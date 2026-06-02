@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import HomeHeader from '../components/home/HomeHeader';
 import Footer from '../components/Footer';
 import HeroSection from '../components/home/HeroSection';
@@ -8,6 +9,11 @@ import ContactSection from '../components/home/ContactSection';
 
 const HomePage = () => {
   return (
+    <>
+      <Helmet>
+        <title>NASSEG — AI-Powered Fashion Boutique</title>
+        <meta name="description" content="Discover luxury fashion at NASSEG — an AI-powered boutique featuring curated collections, smart recommendations, and seamless shopping." />
+      </Helmet>
     <div className="min-h-screen bg-[#f9f8f5]">
       <HomeHeader />
       <div className="-mt-[72px]">
@@ -19,6 +25,7 @@ const HomePage = () => {
       </div>
       <Footer />
     </div>
+    </>
   );
 };
 

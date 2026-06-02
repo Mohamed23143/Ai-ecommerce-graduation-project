@@ -1,10 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import ProductCard from '../ProductCard';
-import { allProducts } from '../../data/products';
+import ProductSkeleton from '../ProductSkeleton';
+import { fetchProducts, type BackendProduct } from '../../services/api';
 
-const trendingProducts = allProducts.slice(0, 4);
+/** Maps backend products to the format ProductCard expects. */
+function toCardProduct(p: BackendProduct) {
+  return {
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    image: p.image,
+    category: p.category,
+  };
+}
 
 const TrendingNow = () => {
+  const [products, setProducts] = useState<BackendProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchProducts()
+      .then((data) => setProducts(data.slice(0, 4)))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <section id="trending" className="py-16 lg:py-20 bg-[#f9f8f5]">
       <div className="max-w-8xl mx-auto px-5 lg:px-12">
@@ -21,12 +44,28 @@ const TrendingNow = () => {
           </Link>
         </div>
 
+        {/* Loading */}
+        {loading && <ProductSkeleton count={4} />}
+
+        {/* Error */}
+        {error && (
+          <p className="text-sm font-sans text-red-500 text-center py-12">
+            Failed to load products. Please try again later.
+          </p>
+        )}
+
         {/* Products Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {trendingProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+        {!loading && !error && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {products.map((product, index) => (
+              <ProductCard
+                key={product.id}
+                product={toCardProduct(product)}
+                index={index}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Mobile View All */}
         <div className="mt-8 text-center sm:hidden">

@@ -1,28 +1,41 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { SignIn, SignUp, useUser } from '@clerk/react';
+import { Helmet } from 'react-helmet-async';
+import { SignIn, SignUp, useUser, useAuth } from '@clerk/react';
 import { IoArrowBackOutline } from 'react-icons/io5';
+import { syncClerkUser } from '../services/api';
 
 const AuthPage = () => {
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('mode') === 'signup' ? 'signup' : 'login');
+  const pageTitle = mode === 'login' ? 'Sign In — NASSEG' : 'Create Account — NASSEG';
   const [isLoaded, setIsLoaded] = useState(false);
   const navigate = useNavigate();
-  const { isLoaded: clerkLoaded, isSignedIn } = useUser();
+  const { isLoaded: clerkLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (clerkLoaded && isSignedIn) {
+    if (clerkLoaded && isSignedIn && user) {
+      getToken().then(token => {
+        if (token && user.primaryEmailAddress?.emailAddress) {
+          syncClerkUser(token, user.primaryEmailAddress.emailAddress).catch(() => {});
+        }
+      });
       navigate('/account', { replace: true });
     }
-  }, [clerkLoaded, isSignedIn, navigate]);
+  }, [clerkLoaded, isSignedIn, user, navigate, getToken]);
 
 
   return (
     <div className="min-h-screen bg-[#f9f8f5] flex flex-col md:flex-row overflow-hidden">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={mode === 'login' ? 'Sign in to your NASSEG account.' : 'Create your NASSEG account for a personalized shopping experience.'} />
+      </Helmet>
       {/* Left Side: Branding */}
       <div className="hidden md:flex md:w-1/2 bg-dark relative overflow-hidden group">
         <div className="absolute inset-0 z-10 bg-black/40 group-hover:bg-black/30 transition-colors duration-700" />
