@@ -22,7 +22,7 @@ const NewArrivalsPage = () => {
         className={`relative h-[300px] md:h-[420px] overflow-hidden reveal-element ${heroReveal.isVisible ? 'revealed' : ''}`}
       >
         <img
-          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1400&h=500&fit=crop&crop=center"
+          src="/catagore/Elegant_fabrics_flowing_golden_l__202606030746.jpeg"
           alt="New Arrivals"
           className="w-full h-full object-cover"
         />

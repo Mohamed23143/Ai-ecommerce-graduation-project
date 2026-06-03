@@ -180,7 +180,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/8">
+        <div>
           <div className="max-w-8xl mx-auto px-5 lg:px-12 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-white/30">
               © 2026 Nasseg. All rights reserved.

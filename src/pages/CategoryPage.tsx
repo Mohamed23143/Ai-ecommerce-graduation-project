@@ -12,22 +12,22 @@ const categoryMeta: Record<string, { title: string; subtitle: string; heroImage:
   women: {
     title: "Women's Collection",
     subtitle: 'Timeless elegance redefined for the modern woman',
-    heroImage: 'https://images.unsplash.com/photo-1581044777550-4cfa60707998?w=1400&h=500&fit=crop&crop=center',
+    heroImage: '/catagore/Woman_walking_luxury_boutique_202606030746.jpeg',
   },
   men: {
     title: "Men's Collection",
     subtitle: 'Refined sophistication for the contemporary gentleman',
-    heroImage: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1400&h=500&fit=crop&crop=center',
+    heroImage: '/catagore/Man_in_suit_in_boutique_202606030746.jpeg',
   },
   accessories: {
     title: 'Accessories',
     subtitle: 'The finishing touches that complete every look',
-    heroImage: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=1400&h=500&fit=crop&crop=center',
+    heroImage: '/catagore/Luxury_accessories_flat-lay_crea__202606030746.jpeg',
   },
   eyewear: {
     title: 'Eyewear',
     subtitle: 'See the world through a lens of luxury',
-    heroImage: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=1400&h=500&fit=crop&crop=center',
+    heroImage: '/catagore/Luxury_sunglasses_eyeglasses_cre__202606030746.jpeg',
   },
 };
 

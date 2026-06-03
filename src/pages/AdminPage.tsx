@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { allProducts, formatPrice } from '../data/products';
 import { adminStats, recentOrders, adminUsers, categories, monthlyAnalytics, topProducts } from '../data/adminData';
 import type { Order, AdminUser } from '../data/adminData';
-import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAddOutline, IoTrashOutline, IoCheckmarkCircle, IoLogOutOutline } from 'react-icons/io5';
+import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAddOutline, IoTrashOutline, IoCheckmarkCircle, IoLogOutOutline, IoShieldCheckmarkOutline } from 'react-icons/io5';
 import AdminAuthPage from './AdminAuthPage';
 
-type Section = 'dashboard' | 'products' | 'orders' | 'users' | 'categories' | 'analytics' | 'settings';
+type Section = 'dashboard' | 'products' | 'orders' | 'users' | 'categories' | 'analytics' | 'settings' | 'admin-users';
 
 const statusStyles: Record<Order['status'], string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -24,6 +24,7 @@ const sidebarLinks: { id: Section; label: string; icon: typeof IoGridOutline }[]
   { id: 'categories', label: 'Categories', icon: IoPricetagOutline },
   { id: 'analytics', label: 'Analytics', icon: IoBarChartOutline },
   { id: 'settings', label: 'Settings', icon: IoSettingsOutline },
+  { id: 'admin-users', label: 'Admin Users', icon: IoShieldCheckmarkOutline },
 ];
 
 export default function AdminPage() {
@@ -134,6 +135,7 @@ export default function AdminPage() {
           {section === 'categories' && <Categories />}
           {section === 'analytics' && <Analytics />}
           {section === 'settings' && <Settings />}
+          {section === 'admin-users' && <AdminUsers />}
         </div>
       </div>
     </div>
@@ -788,7 +790,7 @@ function Settings() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="bg-white rounded-lg border border-border-light p-6">
         <h3 className="text-sm font-serif italic font-medium text-dark mb-5">Store Information</h3>
         <div className="space-y-4">
@@ -862,6 +864,179 @@ function Settings() {
           Reset
         </button>
       </div>
+    </div>
+  );
+}
+
+interface AdminUserEntry {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+  role: 'super_admin' | 'admin';
+  created: string;
+}
+
+const defaultAdminUsers: AdminUserEntry[] = [
+  { id: 1, name: 'Admin', email: 'admin@nasseg.com', password: 'admin123', role: 'super_admin', created: '2025-01-01' },
+];
+
+function loadAdminUsers(): AdminUserEntry[] {
+  try {
+    const stored = localStorage.getItem('adminUsers');
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return defaultAdminUsers;
+}
+
+function saveAdminUsers(users: AdminUserEntry[]) {
+  localStorage.setItem('adminUsers', JSON.stringify(users));
+}
+
+function AdminUsers() {
+  const [users, setUsers] = useState<AdminUserEntry[]>(() => loadAdminUsers());
+  const [showAdd, setShowAdd] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' as AdminUserEntry['role'] });
+  const [sessionEmail] = useState(() => {
+    try {
+      const session = localStorage.getItem('adminSession');
+      return session ? JSON.parse(session).email : '';
+    } catch { return ''; }
+  });
+
+  const save = (updated: AdminUserEntry[]) => {
+    setUsers(updated);
+    saveAdminUsers(updated);
+  };
+
+  const addUser = () => {
+    if (!newUser.name || !newUser.email || !newUser.password) return;
+    if (users.some(u => u.email === newUser.email)) return;
+    const updated = [...users, { ...newUser, id: Date.now(), created: new Date().toISOString().split('T')[0] }];
+    save(updated);
+    setNewUser({ name: '', email: '', password: '', role: 'admin' });
+    setShowAdd(false);
+  };
+
+  const deleteUser = (id: number) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    if (user.email === sessionEmail) return;
+    if (user.role === 'super_admin' && users.filter(u => u.role === 'super_admin').length <= 1) return;
+    const updated = users.filter(u => u.id !== id);
+    save(updated);
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] text-muted font-sans">{users.length} admin users</span>
+        <button onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 text-[10px] font-sans tracking-widest-xl uppercase px-4 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-all duration-300">
+          <IoAddOutline className="w-3.5 h-3.5" />
+          Add Admin User
+        </button>
+      </div>
+
+      <div className="bg-white rounded-lg border border-border-light overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm font-sans">
+            <thead>
+              <tr className="border-b border-border-light bg-cream-dark/50">
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Name</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Email</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Role</th>
+                <th className="text-left px-5 py-3 text-[10px] font-sans tracking-widest-xl uppercase text-muted">Created</th>
+                <th className="w-20 px-5 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id} className="border-b border-border-light last:border-b-0 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-dark flex items-center justify-center text-white text-xs font-sans font-medium">{user.name.charAt(0)}</div>
+                      <p className="text-dark font-medium">{user.name}</p>
+                      {user.email === sessionEmail && <span className="text-[9px] font-sans tracking-widest-xl uppercase text-gold bg-gold/10 px-1.5 py-0.5 rounded">You</span>}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-muted">{user.email}</td>
+                  <td className="px-5 py-3.5">
+                    <span className={`inline-block text-[10px] font-sans tracking-widest-xl uppercase px-2 py-0.5 rounded ${user.role === 'super_admin' ? 'text-gold bg-gold/10' : 'text-muted bg-cream-dark'}`}>
+                      {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-muted text-[11px]">{user.created}</td>
+                  <td className="px-5 py-3.5">
+                    <button onClick={() => deleteUser(user.id)}
+                      disabled={user.email === sessionEmail}
+                      className={`text-[10px] font-sans tracking-widest-xl uppercase flex items-center gap-1 transition-colors ${
+                        user.email === sessionEmail
+                          ? 'text-muted/30 cursor-not-allowed'
+                          : 'text-muted hover:text-red-500'
+                      }`}>
+                      <IoTrashOutline className="w-3.5 h-3.5" />
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
+          <div className="relative bg-white rounded-lg border border-border-light shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-serif italic font-medium text-dark">Add Admin User</h3>
+              <button onClick={() => setShowAdd(false)} className="w-7 h-7 rounded-lg bg-cream-dark hover:bg-border-light flex items-center justify-center transition-colors">
+                <IoClose className="w-3.5 h-3.5 text-muted" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Full Name</label>
+                <input type="text" value={newUser.name} onChange={e => setNewUser(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="John Doe"
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Email</label>
+                <input type="email" value={newUser.email} onChange={e => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="admin@nasseg.com"
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Password</label>
+                <input type="password" value={newUser.password} onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="••••••••"
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors placeholder:text-muted/40" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5">Role</label>
+                <select value={newUser.role} onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value as AdminUserEntry['role'] }))}
+                  className="w-full bg-white border border-border-light rounded-lg px-4 py-2.5 text-sm font-sans outline-none focus:border-gold transition-colors">
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowAdd(false)}
+                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 border border-border-light rounded-lg hover:border-dark transition-colors">
+                  Cancel
+                </button>
+                <button onClick={addUser}
+                  className="text-[10px] font-sans tracking-widest-xl uppercase px-5 py-2.5 bg-dark text-white rounded-lg hover:bg-neutral-800 transition-colors">
+                  Add User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

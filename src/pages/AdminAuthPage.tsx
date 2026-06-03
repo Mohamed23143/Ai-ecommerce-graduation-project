@@ -42,6 +42,16 @@ export default function AdminAuthPage({ onAuth }: AdminAuthPageProps) {
           return;
         }
       }
+      const storedUsers = localStorage.getItem('adminUsers');
+      if (storedUsers) {
+        const users = JSON.parse(storedUsers);
+        const found = users.find((u: { email: string; password: string; name: string }) => u.email === email && u.password === password);
+        if (found) {
+          localStorage.setItem('adminSession', JSON.stringify({ name: found.name, email, loggedInAt: new Date().toISOString() }));
+          onAuth();
+          return;
+        }
+      }
       if (email === 'admin@nasseg.com' && password === 'admin123') {
         localStorage.setItem('adminSession', JSON.stringify({ name: 'Admin', email, loggedInAt: new Date().toISOString() }));
         onAuth();
