@@ -1,128 +1,96 @@
-#  AI-Powered Web Store
+# NASSEG — AI-Powered Luxury E-Commerce
 
-Creating an **online store with integrated Artificial Intelligence
-features** to improve the user experience and increase sales.
+A luxury fashion e-commerce platform with integrated AI chatbot, built with React, TypeScript, and Tailwind CSS.
 
-------------------------------------------------------------------------
+## Tech Stack
 
-#  Features Overview
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
+- **Auth:** Clerk (authentication & user management)
+- **AI:** OpenRouter API (`deepseek/deepseek-v4-flash`) via proxy
+- **Routing:** React Router v6
+- **Icons:** React Icons (Feather, Ionicons)
+- **State:** React Context (cart, search)
+- **Images:** Local `/products/` and `/catagore/` directories
 
-## [1] User System
+## Features
 
--   Register
--   Login
--   Logout
--   Profile management
+### Store
+- Product catalog with 20 items across 5 categories (Women, Men, Accessories, Eyewear, Footwear)
+- Category pages with local hero images
+- Collections, New Arrivals, and Sale pages
+- Product detail pages with size/color selection
+- Full-screen search overlay
+- Shopping cart with drawer
 
-------------------------------------------------------------------------
+### AI Chat Assistant
+- Floating chat widget on homepage
+- Real-time streaming responses via OpenRouter
+- Markdown rendering, copy-on-hover, retry on error
+- Stop-generation, online status indicator
+- About modal and keyboard shortcuts
 
-## [2] Products
+### User System
+- Clerk-powered authentication (sign in / register)
+- Account dashboard with order history, wishlist, and profile
+- Guest checkout available
 
--   Display all products
--   Product details page
+### Checkout
+- 3-step checkout (shipping → delivery → payment)
+- Card, cash, and wallet payment options
+- Card scanning via OCR (Tesseract.js)
+- Promo code support
 
-### Filtering options
+### Admin Panel
+- Full CRUD for products, categories, admin users
+- Order management with status updates
+- Customer management
+- Analytics dashboard with computed metrics
+- Protected by admin authentication
 
--   Price
--   Size
--   Color
--   Category
+## Getting Started
 
-------------------------------------------------------------------------
+```bash
+# Install dependencies
+npm install
 
-## [3] Cart
+# Set up environment variables
+# Create .env file:
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
+VITE_OPENROUTER_API_KEY=your_openrouter_key
 
--   Add product
--   Remove product
--   Update quantity
+# Start development server
+npm run dev
 
-------------------------------------------------------------------------
+# Build for production
+npm run build
 
-## [4] Checkout
+# Lint
+npm run lint
+```
 
--   Enter shipping address
--   Choose payment method
--   Confirm order
+## Project Structure
 
-------------------------------------------------------------------------
+```
+src/
+├── components/       # Reusable UI components
+│   └── home/         # Homepage components (chat, categories, etc.)
+├── context/          # React contexts (CartContext)
+├── data/             # Static data (products)
+├── pages/            # Route pages
+│   ├── AdminPage.tsx    # Admin panel (dashboard, products, orders, etc.)
+│   ├── UserDashboard.tsx # User account dashboard
+│   ├── AuthPage.tsx     # Clerk sign in/up page
+│   ├── CheckoutPage.tsx # Checkout flow
+│   └── ...              # Other pages
+└── services/         # API services (OpenRouter AI)
+```
 
-## [5] Orders
+## Design
 
--   View previous orders
--   Order status tracking
+- **Colors:** Cream `#f9f8f5`, Gold `#c4a265`, Dark `#1a1a1a`
+- **Fonts:** Playfair Display (serif headings), Inter (sans-serif body)
+- **Aesthetic:** Minimal luxury with clean borders, generous whitespace, and gold accents
 
-------------------------------------------------------------------------
+## Admin Access
 
-## [6] Admin Panel
-
--   Add product
--   Edit product
--   Delete product
--   View orders
-
-------------------------------------------------------------------------
-
-# AI Features
-
-## 1. AI Chat Assistant
-
-Helps customers to:
-
--   Suggest products
--   Answer questions
--   Guide users through the store
-
-------------------------------------------------------------------------
-
-## 2. AI Product Description Generator
-
-When adding a product:
-
--   Generates professional product descriptions
--   Creates product highlights
--   Optimizes content for SEO
-
-------------------------------------------------------------------------
-
-## 3. Smart Recommendation System
-
-Recommends products based on:
-
--   Previous purchases
--   Similar products
--   User behavior
-
-------------------------------------------------------------------------
-
-# System Architecture
-
-- **Frontend:** React.js  
-- **Backend:** Python  
-- **Database:** PostgreSQL  
-- **AI Integration:** Gemini API
-
-------------------------------------------------------------------------
-
-# Database Design
-
-## Users Collection
-
--   id
--   name
--   email
--   password
--   role (user / admin)
-
-------------------------------------------------------------------------
-
-## Products Collection
-
--   id
--   name
--   description
--   price
--   category
--   sizes
--   colors
--   images
--   stock
+Navigate to `/admin` and sign in with credentials stored in localStorage. Default: `admin@nasseg.com` / `admin123`.

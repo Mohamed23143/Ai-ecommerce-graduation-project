@@ -1018,8 +1018,8 @@ function Analytics() {
         <div>
           <h3 className="font-serif text-lg italic text-dark mb-4">Top Products</h3>
           <div className="bg-white border border-border-light p-6 space-y-4">
-            {topProductsData.map((p, i) => {
-              const product = allProducts.find(pr => pr.name === p.name);
+            {topProducts.map((p, i) => {
+              const product = allProducts.find(pr => pr.id === p.id);
               return (
                 <div key={p.name} className="flex items-center justify-between group">
                   <div className="flex items-center gap-4">
