@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, type ReactNode, type CSSProperties } from 'react';
+import { useRef, useEffect, useState, type ElementType, type ReactNode, type CSSProperties } from 'react';
 
 type RevealVariant = 'fade-up' | 'fade-left' | 'fade-right' | 'scale' | 'blur' | 'fade-down';
 
@@ -10,7 +10,7 @@ interface ScrollRevealProps {
   threshold?: number;
   className?: string;
   style?: CSSProperties;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
 }
 
 const variantStyles: Record<RevealVariant, { hidden: CSSProperties; visible: CSSProperties }> = {
@@ -83,7 +83,6 @@ const ScrollReveal = ({
     willChange: 'opacity, transform, filter',
   };
 
-  // @ts-expect-error - dynamic tag element
   return <Tag ref={ref} className={className} style={combinedStyle}>{children}</Tag>;
 };
 

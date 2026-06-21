@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useUser, useAuth } from '@clerk/react';
@@ -17,8 +17,6 @@ const CheckoutPage = () => {
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-
   // Form state
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -27,15 +25,10 @@ const CheckoutPage = () => {
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
 
-  useEffect(() => {
-    setIsLoaded(true);
-  }, []);
-
   const shippingCost = shippingMethod === 'express' ? 25 : 15;
   const discount = promoApplied ? Math.round(cartTotal * 0.1) : 0;
   const total = cartTotal + shippingCost - discount;
 
-  const [paymentMethod] = useState<'cash'>('cash');
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [orderResult, setOrderResult] = useState<OrderResponse | null>(null);
@@ -332,7 +325,7 @@ const CheckoutPage = () => {
             <div className="flex justify-between">
               <span className="text-[11px] font-sans text-muted uppercase tracking-widest">Shipping</span>
               <span className="text-sm font-sans text-gold">
-                {shippingCost === 0 ? 'Complimentary' : formatPrice(shippingCost)}
+                {formatPrice(shippingCost)}
               </span>
             </div>
             {promoApplied && (

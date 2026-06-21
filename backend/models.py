@@ -19,6 +19,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     clerk_user_id = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, nullable=False)
+    role = Column(String, default="customer")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     orders = relationship("Order", back_populates="user")

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import SplashScreen from './components/SplashScreen';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
+import { AuthProvider } from './context/AuthContext';
 import ScrollToTop from './components/ScrollToTop';
 import PageTransition from './components/PageTransition';
 import SearchOverlay from './components/SearchOverlay';
@@ -82,6 +83,7 @@ function App() {
       <FavoritesProvider>
       <CartProvider>
       <HelmetProvider>
+      <AuthProvider>
       <Router>
         <Routes>
           <Route path="/admin" element={<AdminPage />} />
@@ -89,6 +91,7 @@ function App() {
           <Route path="/*" element={<AppContent />} />
         </Routes>
       </Router>
+      </AuthProvider>
       </HelmetProvider>
     </CartProvider>
     </FavoritesProvider>

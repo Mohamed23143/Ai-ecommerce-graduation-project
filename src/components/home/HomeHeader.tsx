@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { IoMenuOutline, IoCloseOutline, IoBagHandleOutline, IoSearchOutline, IoPersonOutline } from 'react-icons/io5';
+import { IoMenuOutline, IoCloseOutline, IoBagHandleOutline, IoSearchOutline, IoPersonOutline, IoShieldOutline } from 'react-icons/io5';
 import { Show, useUser } from '@clerk/react';
 import { useCart } from '../../context/CartContext';
+import { useAuthRole } from '../../context/AuthContext';
 
 const HomeHeader = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { cartCount, setIsCartOpen, setIsSearchOpen } = useCart();
   const { user } = useUser();
+  const { isAdmin, loadingRole } = useAuthRole();
   const userAvatar = user?.imageUrl;
 
   useEffect(() => {
@@ -125,6 +127,17 @@ const HomeHeader = () => {
                   <IoPersonOutline className="w-[18px] h-[18px]" />
                 )}
               </Link>
+              {!loadingRole && isAdmin && (
+                <Link
+                  to="/admin"
+                  className={`text-[11px] font-sans tracking-widest-xl uppercase transition-colors duration-300 hidden md:flex items-center gap-1.5 ${
+                    scrolled ? 'text-dark hover:text-gold' : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  <IoShieldOutline className="w-[15px] h-[15px]" />
+                  Admin
+                </Link>
+              )}
             </Show>
             <Show when="signed-out">
               <Link
@@ -202,6 +215,12 @@ const HomeHeader = () => {
                   )}
                   Account
                 </Link>
+                {!loadingRole && isAdmin && (
+                  <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">
+                    <IoShieldOutline className="w-5 h-5" />
+                    Admin Panel
+                  </Link>
+                )}
               </Show>
               <Show when="signed-out">
                 <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Account</Link>

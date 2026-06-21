@@ -119,10 +119,6 @@ const AuthPage = () => {
                   colorBackground: 'transparent',
                   borderRadius: '0',
                 },
-                elements: {
-                  rootBox: 'w-full',
-                  card: 'w-full max-w-none shadow-none p-0 bg-transparent border-none',
-                  header: 'hidden',
                   main: 'w-full space-y-5',
                   formFieldLabel: 'block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5',
                   formFieldInput: 'w-full bg-white border border-border-light px-4 py-3 text-sm font-sans outline-none transition-all duration-300 focus:border-dark placeholder:text-muted/40',
@@ -133,10 +129,9 @@ const AuthPage = () => {
                   dividerRow: 'hidden',
                   socialButtonsBlockButton: 'w-full flex items-center justify-center gap-3 border border-border-light py-3.5 text-[11px] font-sans tracking-widest-xl uppercase text-dark hover:border-dark hover:bg-dark hover:text-white transition-all duration-300 bg-transparent rounded-none',
                   socialButtonsBlockButtonText: 'text-[11px] font-sans tracking-widest-xl uppercase',
-                  socialButtons: 'w-full space-y-3',
+                  socialButtons: 'flex gap-3',
                   alternativeMethodsBlockButton: 'text-[10px] font-sans tracking-widest uppercase text-gold hover:text-gold-hover bg-transparent border-none',
                   formField: 'w-full',
-                },
               }}
               signUpUrl="/auth?mode=signup"
               fallbackRedirectUrl="/"
@@ -155,10 +150,6 @@ const AuthPage = () => {
                   colorBackground: 'transparent',
                   borderRadius: '0',
                 },
-                elements: {
-                  rootBox: 'w-full',
-                  card: 'w-full max-w-none shadow-none p-0 bg-transparent border-none',
-                  header: 'hidden',
                   main: 'w-full space-y-5',
                   formFieldLabel: 'block text-[10px] font-sans tracking-widest-xl uppercase text-muted mb-1.5',
                   formFieldInput: 'w-full bg-white border border-border-light px-4 py-3 text-sm font-sans outline-none transition-all duration-300 focus:border-dark placeholder:text-muted/40',
@@ -167,9 +158,8 @@ const AuthPage = () => {
                   dividerRow: 'hidden',
                   socialButtonsBlockButton: 'w-full flex items-center justify-center gap-3 border border-border-light py-3.5 text-[11px] font-sans tracking-widest-xl uppercase text-dark hover:border-dark hover:bg-dark hover:text-white transition-all duration-300 bg-transparent rounded-none',
                   socialButtonsBlockButtonText: 'text-[11px] font-sans tracking-widest-xl uppercase',
-                  socialButtons: 'w-full space-y-3',
+                  socialButtons: 'flex gap-3',
                   formField: 'w-full',
-                },
               }}
               signInUrl="/auth"
               fallbackRedirectUrl="/"

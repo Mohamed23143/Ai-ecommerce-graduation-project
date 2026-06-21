@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { formatPrice } from '../data/products';
-import { fetchAdminStats, fetchAdminOrders, updateOrderStatus, fetchProducts, createAdminProduct, updateAdminProduct, deleteAdminProduct, generateAIDescription, fetchAdminUsers, fetchAdminCategories, fetchMonthlyAnalytics, fetchTopProducts } from '../services/api';
-import type { AdminStats, AdminOrder, BackendProduct, AdminUserInfoExtended, AdminCategory, MonthlyAnalytics, TopProduct } from '../services/api';
+import { fetchAdminStats, fetchAdminOrders, updateOrderStatus, fetchProducts, createAdminProduct, updateAdminProduct, deleteAdminProduct, generateAIDescription, fetchAdminUsers, fetchAdminCategories, fetchTopProducts } from '../services/api';
+import type { AdminStats, AdminOrder, BackendProduct, AdminUserInfoExtended, AdminCategory, TopProduct } from '../services/api';
 import { uploadProductImage } from '../services/supabase';
-import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAdd, IoTrashOutline, IoCheckmarkCircle, IoLogOutOutline, IoPrintOutline } from 'react-icons/io5';
+import { IoGridOutline, IoBagHandleOutline, IoCartOutline, IoPeopleOutline, IoCubeOutline, IoClose, IoSearchOutline, IoChevronDown, IoPricetagOutline, IoBarChartOutline, IoSettingsOutline, IoAdd, IoCheckmarkCircle, IoLogOutOutline, IoPrintOutline } from 'react-icons/io5';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminAuthPage from './AdminAuthPage';
 
@@ -1040,18 +1040,14 @@ function Categories() {
 }
 
 function Analytics() {
-  const [monthlyData, setMonthlyData] = useState<MonthlyAnalytics[]>([]);
   const [topProductsData, setTopProductsData] = useState<TopProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchMonthlyAnalytics(), fetchTopProducts()])
-      .then(([m, t]) => {
-        if (!cancelled) {
-          setMonthlyData(m);
-          setTopProductsData(t);
-        }
+    fetchTopProducts()
+      .then((t) => {
+        if (!cancelled) setTopProductsData(t);
       })
       .catch(() => { })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -1066,44 +1062,10 @@ function Analytics() {
     );
   }
 
-  const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1);
   const maxSales = Math.max(...topProductsData.map(t => t.sales), 1);
 
   return (
     <div className="space-y-8">
-      {/* Monthly Revenue Chart */}
-      {/* <div>
-        <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Monthly Revenue</h3>
-        <div className="bg-white rounded-2xl border border-border-light p-6">
-          {monthlyData.length === 0 ? (
-            <p className="text-center text-sm text-muted font-sans py-8">No revenue data yet.</p>
-          ) : (
-            <div className="flex items-end gap-2 h-52">
-              {monthlyData.map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: 1 }}
-                  transition={{ delay: i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end origin-bottom"
-                >
-                  <span className="text-[9px] font-sans text-muted">{formatPrice(item.revenue)}</span>
-                  <div
-                    className="w-full bg-gradient-to-t from-dark to-dark/70 hover:from-gold hover:to-gold/70 transition-all duration-300 rounded-t-lg cursor-pointer relative group"
-                    style={{ height: `${(item.revenue / maxRevenue) * 100}%` }}
-                  >
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-dark text-white text-[9px] font-sans px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
-                      {formatPrice(item.revenue)}
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-sans text-muted mt-1">{item.month}</span>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div> */}
-
       {/* Top Products */}
       <div>
         <h3 className="text-sm font-serif italic font-medium text-dark mb-4">Top Products</h3>

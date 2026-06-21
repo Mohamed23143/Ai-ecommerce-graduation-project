@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Show, useUser, UserButton } from '@clerk/react';
-import { IoArrowBack, IoMenuOutline, IoCloseOutline, IoBagHandleOutline, IoSearchOutline, IoPersonOutline } from 'react-icons/io5';
+import { Show, useUser } from '@clerk/react';
+import { IoArrowBack, IoMenuOutline, IoCloseOutline, IoBagHandleOutline, IoSearchOutline, IoPersonOutline, IoShieldOutline } from 'react-icons/io5';
 import { useCart } from '../context/CartContext';
+import { useAuthRole } from '../context/AuthContext';
 
 interface HeaderProps {
   backLabel?: string;
@@ -15,6 +16,7 @@ const Header = ({ backLabel = 'Back to Collection', backTo = '/', overlay = fals
   const [scrolled, setScrolled] = useState(false);
   const { cartCount, setIsCartOpen, setIsSearchOpen } = useCart();
   const { user } = useUser();
+  const { isAdmin, loadingRole } = useAuthRole();
   const userAvatar = user?.imageUrl;
 
   useEffect(() => {
@@ -89,6 +91,12 @@ const Header = ({ backLabel = 'Back to Collection', backTo = '/', overlay = fals
                   <IoPersonOutline className="w-[18px] h-[18px]" />
                 )}
               </Link>
+              {!loadingRole && isAdmin && (
+                <Link to="/admin" className={`text-[11px] font-sans tracking-widest-xl uppercase transition-colors duration-300 flex items-center gap-1.5 ${textColor} ${textHover}`}>
+                  <IoShieldOutline className="w-[15px] h-[15px]" />
+                  Admin
+                </Link>
+              )}
             </Show>
             <Show when="signed-out">
               <Link to="/auth" className={`p-1 transition-colors ${iconColor}`} aria-label="Account">
@@ -159,6 +167,12 @@ const Header = ({ backLabel = 'Back to Collection', backTo = '/', overlay = fals
                   )}
                   Account
                 </Link>
+                {!loadingRole && isAdmin && (
+                  <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">
+                    <IoShieldOutline className="w-5 h-5" />
+                    Admin Panel
+                  </Link>
+                )}
               </Show>
               <Show when="signed-out">
                 <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-sm font-sans tracking-widest-xl uppercase text-dark hover:text-gold transition-colors">Account</Link>

@@ -258,6 +258,10 @@ export function fetchTopProducts(): Promise<TopProduct[]> {
 /* ── Auth / User Sync ──────────────────────────────── */
 
 
+export function fetchCurrentUser(token: string): Promise<{ id: number; email: string; role: string }> {
+  return request('/auth/me', { token });
+}
+
 export function syncClerkUser(token: string, email: string): Promise<{ id: number; clerk_user_id: string; email: string }> {
   return request('/auth/sync-user', {
     method: 'POST',

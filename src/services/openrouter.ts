@@ -1,6 +1,6 @@
 const API_URL = '/api/openrouter/chat/completions';
-const MODEL = 'poolside/laguna-m.1:free';
-const TIMEOUT_MS = 15_000;
+const MODEL = "deepseek/deepseek-v4-flash";
+const TIMEOUT_MS = 20_000;
 
 const SYSTEM_PROMPT = `You are Nasseg's AI fashion stylist assistant. You help customers with fashion advice, product recommendations, sizing, and store information.
 
@@ -38,16 +38,35 @@ export async function getAIResponse(
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
   if (!apiKey) {
+    console.error('[OpenRouter] No API key found in VITE_OPENROUTER_API_KEY');
     return "Please set your OpenRouter API key in the .env file (VITE_OPENROUTER_API_KEY).";
   }
 
+  console.log('[OpenRouter] API key present (first 10 chars):', apiKey.substring(0, 10) + '...');
+  console.log('[OpenRouter] Messages being sent:', JSON.stringify(messages));
+
   const cached = getCached(messages);
-  if (cached) return cached;
+  if (cached) {
+    console.log('[OpenRouter] Returning cached response');
+    return cached;
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
+    const payload = {
+      model: MODEL,
+      max_tokens: 100,
+      temperature: 0,
+      stream: !!onStream,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...messages,
+      ],
+    };
+    console.log('[OpenRouter] Sending payload model:', MODEL, 'stream:', !!onStream);
+
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: {
@@ -56,36 +75,54 @@ export async function getAIResponse(
         'HTTP-Referer': window.location.origin,
         'X-Title': 'NASSEG Fashion',
       },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 100,
-        temperature: 0,
-        stream: !!onStream,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...messages,
-        ],
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
     clearTimeout(timeout);
 
+    console.log('[OpenRouter] Response status:', res.status, res.statusText);
+    console.log('[OpenRouter] Response body stream available:', !!res.body);
+
     if (!res.ok) {
+      console.error('[OpenRouter] Request failed');
+      console.error('[OpenRouter] Status:', res.status, res.statusText);
+      console.error('[OpenRouter] Model requested:', MODEL);
+      console.error('[OpenRouter] API key (first 10 chars):', apiKey.substring(0, 10) + '...');
+      try {
+        const errBody = await res.json();
+        console.error('[OpenRouter] Error body:', JSON.stringify(errBody, null, 2));
+      } catch {
+        const errText = await res.text().catch(() => '');
+        console.error('[OpenRouter] Raw error text:', errText);
+      }
       return "Sorry, I'm having trouble connecting right now. Please try again later.";
     }
 
     if (onStream && res.body) {
-      return streamResponse(res, onStream, messages);
+      console.log('[OpenRouter] Streaming path selected');
+      const result = await streamResponse(res, onStream, messages);
+      console.log('[OpenRouter] Stream complete, final content length:', result.length);
+      return result;
     }
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || "I couldn't generate a response. Please try again.";
-    setCache(messages, content);
-    return content;
+    console.log('[OpenRouter] JSON (non-streaming) path — res.body was', !!res.body ? 'available' : 'null', 'onStream was', !!onStream);
+    const rawText = await res.text();
+    console.log('[OpenRouter] RAW response text:', rawText);
+    const data = JSON.parse(rawText);
+    console.log('[OpenRouter] Parsed JSON:', JSON.stringify(data, null, 2));
+    const content = data.choices?.[0]?.message?.content;
+    console.log('[OpenRouter] EXTRACTED text:', content);
+    if (content) {
+      setCache(messages, content);
+      return content;
+    }
+    return "I couldn't generate a response. Please try again.";
   } catch (err) {
     clearTimeout(timeout);
+    console.error('[OpenRouter] Fetch error:', err);
     if (err instanceof DOMException && err.name === 'AbortError') {
+      console.error('[OpenRouter] Request timed out after', TIMEOUT_MS, 'ms');
       return "Request timed out. Please try again.";
     }
     return "Sorry, something went wrong. Please try again.";
@@ -101,30 +138,49 @@ async function streamResponse(
   const decoder = new TextDecoder();
   let fullContent = '';
   let buffer = '';
+  let chunkCount = 0;
+
+  console.log('[OpenRouter] Stream reader created, starting read loop');
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      console.log('[OpenRouter] Stream done, total chunks:', chunkCount);
+      break;
+    }
 
-    buffer += decoder.decode(value, { stream: true });
+    chunkCount++;
+    const decoded = decoder.decode(value, { stream: true });
+    console.log('[OpenRouter] DECODED CHUNK #' + chunkCount + ':', decoded.substring(0, 200));
+
+    buffer += decoded;
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
 
     for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
+      if (!line.startsWith('data: ')) {
+        console.log('[OpenRouter] Skipping non-data line:', line.substring(0, 100));
+        continue;
+      }
       const json = line.slice(6).trim();
-      if (json === '[DONE]') continue;
+      if (json === '[DONE]') {
+        console.log('[OpenRouter] Received [DONE] signal');
+        continue;
+      }
       try {
         const parsed = JSON.parse(json);
         const delta = parsed.choices?.[0]?.delta?.content || '';
         if (delta) {
           fullContent += delta;
+          console.log('[OpenRouter] Delta content:', delta);
           onStream(delta);
         }
-      } catch { /* skip malformed chunk */ }
+      } catch (e) { console.error('[OpenRouter] Stream parse error:', e, 'line:', line); }
     }
   }
 
+  console.log('[OpenRouter] Stream finished, fullContent length:', fullContent.length);
+  console.log('[OpenRouter] EXTRACTED full text:', fullContent);
   if (fullContent) setCache(messages, fullContent);
   return fullContent || "I couldn't generate a response. Please try again.";
 }

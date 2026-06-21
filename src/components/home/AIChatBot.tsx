@@ -130,6 +130,7 @@ const AIChatBot = () => {
                   )}
                 </div>
               ))}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -186,14 +187,8 @@ const AIChatBot = () => {
           onClick={() => setIsOpen(!isOpen)}
           className="w-11 h-11 rounded-lg bg-dark text-white shadow-lg flex items-center justify-center hover:bg-gold transition-all duration-300 active:scale-95 relative group border border-dark hover:border-gold"
         >
-          {isOpen ? (
-            <IoClose className="w-5 h-5 text-white" />
-          ) : (
-            <>
-              <IoChatbubbleEllipses className="w-5 h-5 text-white group-hover:hidden" />
-              <IoSparkles className="w-5 h-5 text-white hidden group-hover:block" />
-            </>
-          )}
+          <IoChatbubbleEllipses className="w-5 h-5 text-white group-hover:hidden" />
+          <IoSparkles className="w-5 h-5 text-white hidden group-hover:block" />
         </button>
       </div>
     </>
